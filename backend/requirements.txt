@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+redis
+pymilvus==2.3.4
+langchain
+langchain-community
+dashscope
+pyjwt
+httpx
+requests
+sqlalchemy
+aiomysql
+passlib[bcrypt]
+cryptography
+python-multipart
