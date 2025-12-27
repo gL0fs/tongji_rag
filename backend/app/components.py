@@ -28,7 +28,7 @@ class HistoryManager:
             password=settings.REDIS_PASSWORD,
             decode_responses=True  # 自动解码为字符串
         )
-        self.max_turns = 3       # LLM 上下文保留最近 3 轮对话
+        self.max_turns = 6       # LLM 上下文保留最近 3 轮对话
         self.ttl = 3600 * 24 * 7 # 会话过期时间设置为 7 天
 
     def create_session(self, user_id: str, session_type: str, title: str = "新对话") -> str:
@@ -50,6 +50,26 @@ class HistoryManager:
         self.redis.expire(user_key, self.ttl)
         
         return session_id
+
+    def delete_session(self, user_id: str, session_id: str) -> bool:
+        """
+        删除用户的特定会话。
+        1. 从 user_sessions:{user_id} 哈希表中移除元数据
+        2. 删除 chat_history:{session_id} 列表数据
+        """
+        user_key = f"user_sessions:{user_id}"
+        
+        # 1. 尝试从用户的会话列表中删除该 session_id
+        # hdel 返回删除的个数，如果为 0 说明该用户没有这个会话，或者会话不存在
+        deleted_count = self.redis.hdel(user_key, session_id)
+        
+        if deleted_count > 0:
+            # 2. 如果归属关系确认，删除实际的聊天记录 key
+            history_key = f"chat_history:{session_id}"
+            self.redis.delete(history_key)
+            return True
+            
+        return False
 
     def get_user_sessions(self, user_id: str, type_filter: str = None) -> List[SessionSchema]:
         """

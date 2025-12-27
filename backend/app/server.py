@@ -28,12 +28,10 @@ VALID_SESSION_TYPES = {"public", "academic", "internal", "personal"}
 
 app = FastAPI(title="Tongji RAG System")
 
-# ==========================================
-# 1. 关键修复：添加 CORS 中间件
-# ==========================================
+# CORS 中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许所有来源，生产环境请改为具体的域名
+    allow_origins=["*"],  # 允许所有来源
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -252,6 +250,30 @@ async def create_new_session(
         type=request.type,
         created_at=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
+
+@app.delete("/api/v1/session/{session_id}")
+async def delete_session_endpoint(
+    session_id: str,
+    user: UserContext = Depends(get_current_user)
+):
+    """
+    删除指定会话
+    """
+    # 1. 权限校验：访客或登录用户均可删除自己的会话
+    if not user.user_id:
+        raise HTTPException(status_code=401, detail="User identity missing")
+
+    # 2. 调用管理器执行删除
+    success = history_manager.delete_session(user.user_id, session_id)
+
+    if not success:
+        # 如果删除失败，通常意味着 session_id 不存在或者不属于该用户
+        raise HTTPException(
+            status_code=404, 
+            detail="Session not found or permission denied"
+        )
+    
+    return {"message": "Session deleted successfully", "session_id": session_id}
 
 @app.get("/api/v1/session/list", response_model=SessionListResponse)
 async def get_session_list(
