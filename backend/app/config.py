@@ -6,9 +6,9 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = os.getenv("DASHSCOPE_API_KEY", "")
 
     # Models
-    EMBEDDING_MODEL: str = "text-embedding-v2" # 1536 dim
-    REWRITE_MODEL_NAME: str = "qwen-turbo"
-    GENERATE_MODEL_NAME: str = "qwen-plus"
+    EMBEDDING_MODEL: str = "text-embedding-v4"
+    REWRITE_MODEL_NAME: str = "qwen-flash"
+    GENERATE_MODEL_NAME: str = "qwen3-max"
 
     # JWT Config
     JWT_SECRET_KEY: str = "tongji_rag_secret_key_2025"
@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     MILVUS_HOST: str = os.getenv("MILVUS_HOST", "localhost")
     MILVUS_PORT: str = os.getenv("MILVUS_PORT", "19530")
     
+    COLLECTION_FAQ: str = "rag_faq"
     COLLECTION_STANDARD: str = "rag_standard"
     COLLECTION_KNOWLEDGE: str = "rag_knowledge"
     COLLECTION_INTERNAL: str = "rag_internal"

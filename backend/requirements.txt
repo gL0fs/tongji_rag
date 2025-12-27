@@ -12,6 +12,7 @@ httpx
 requests
 sqlalchemy
 aiomysql
+bcrypt==4.0.1
 passlib[bcrypt]
 cryptography
 python-multipart

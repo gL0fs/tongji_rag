@@ -43,3 +43,26 @@ class Document(BaseModel):
 class RewrittenQuery(BaseModel):
     original_text: str
     rewritten_text: str
+
+# --- 会话管理相关 ---
+class SessionSchema(BaseModel):
+    session_id: str
+    title: str
+    type: str = "public"  # 新增字段
+    created_at: str
+
+class SessionListResponse(BaseModel):
+    data: List[SessionSchema]
+
+class ChatMessage(BaseModel):
+    role: str      # user / assistant
+    content: str
+    timestamp: float = 0.0
+
+class SessionHistoryResponse(BaseModel):
+    session_id: str
+    messages: List[ChatMessage]
+
+class CreateSessionRequest(BaseModel):
+    type: str = "public"  # public, academic, internal, personal
+

@@ -51,7 +51,62 @@ class BasePipeline(ABC):
 # --- 具体业务实现 ---
 
 class PublicPipeline(BasePipeline):
+    # 官方问答命中阈值 (相似度 > 0.85 视为同一个问题)
+    FAQ_THRESHOLD = 0.85
+
+    def execute(self, request: RequestPayload, user: UserContext) -> Generator[str, None, None]:
+        # 1. 记录上下文 & 2. 查询重写
+        history = self.history_mgr.get_recent_turns(request.session_id)
+        rewritten_query = self.llm_service.rewrite_query(history, request.query)
+        self.history_mgr.append_user_message(request.session_id, request.query)
+        
+        # =======================================================
+        # 3. 第一步：检索官方 FAQ 库
+        # =======================================================
+        faq_results = self.retriever.search(
+            rewritten_query.rewritten_text, 
+            [settings.COLLECTION_FAQ], # 只搜 rag_faq
+            top_k=1
+        )
+        
+        # 4. 判断是否命中
+        if faq_results and faq_results[0].score >= self.FAQ_THRESHOLD:
+            # 【命中逻辑】
+            # 直接从 metadata 里拿出 answer 字段
+            direct_answer = faq_results[0].metadata.get("answer")
+            
+            if direct_answer:
+                print(f"[PublicPipeline] FAQ Hit! Score: {faq_results[0].score}")
+                
+                # 加上前缀
+                final_output = f"【官方回答】\n{direct_answer}"
+                
+                # 直接返回，不调 LLM
+                yield final_output
+                self.history_mgr.append_ai_message(request.session_id, final_output)
+                return 
+
+        # =======================================================
+        # 5. 第二步：未命中，走标准 RAG 流程
+        # =======================================================
+        docs = self._retrieve_strategy(rewritten_query.rewritten_text, user)
+        
+        full_answer = ""
+        prompt_tmpl = self._get_prompt_template()
+        
+        try:
+            for chunk in self.llm_service.generate_answer(rewritten_query.rewritten_text, docs, prompt_tmpl):
+                full_answer += chunk
+                yield chunk
+        except Exception as e:
+            err = f"Error: {str(e)}"
+            yield err
+            full_answer += err
+            
+        self.history_mgr.append_ai_message(request.session_id, full_answer)
+
     def _retrieve_strategy(self, query: str, user: UserContext) -> List[Document]:
+        # 标准 RAG 只搜 rag_standard
         return self.retriever.search(query, [settings.COLLECTION_STANDARD], top_k=3)
 
     def _get_prompt_template(self) -> str:
@@ -81,7 +136,11 @@ class InternalPipeline(BasePipeline):
     def _retrieve_strategy(self, query: str, user: UserContext) -> List[Document]:
         # 全量检索，带部门过滤
         # 注意：这里简化处理，对 Internal 库应用 dept_id 过滤
-        filter_expr = f"dept_id == '{user.dept_id}'" if user.dept_id else ""
+        if not user.dept_id:
+        # 如果没有部门ID
+            filter_expr = "dept_id == 'unknown'" 
+        else:
+            filter_expr = f"dept_id == '{user.dept_id}'"
         
         docs_public = self.retriever.search(query, [settings.COLLECTION_STANDARD, settings.COLLECTION_KNOWLEDGE], top_k=3)
         docs_internal = self.retriever.search(query, [settings.COLLECTION_INTERNAL], top_k=3, filters=filter_expr)
