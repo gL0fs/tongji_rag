@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from passlib.context import CryptContext
 from sqlalchemy import select
 from app.database import engine, Base, AsyncSessionLocal
-from app.models_db import User
+from app.models_db import User, CrawlTask, CrawlBlock  # 导入所有模型以确保表被创建
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

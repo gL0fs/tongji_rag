@@ -14,8 +14,10 @@ ENV PYTHONPATH=/app
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    ca-certificates \
     default-libmysqlclient-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && update-ca-certificates
 
 # 1. 先复制依赖文件
 COPY requirements.txt .
