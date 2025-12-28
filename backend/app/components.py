@@ -227,9 +227,12 @@ class VectorRetriever:
             return []
 
         all_results = []
+
+        existing_cols = self.client.list_collections()
+
         for col_name in collections:
             try:
-                if not self.client.has_collection(col_name):
+                if col_name not in existing_cols:
                     continue
             
                 res = self.client.search(
@@ -239,7 +242,6 @@ class VectorRetriever:
                     filter=filters, 
                     output_fields=["text", "source", "dept_id", "user_id", "answer", "question"]
                 )
-                
                 for hit in res[0]:
                     entity = hit['entity']
                     
