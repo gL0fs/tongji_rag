@@ -695,18 +695,18 @@ class DataIngester:
         try:
             existing_cols = self.client.list_collections()
             if collection_name not in existing_cols:
-                print(f"⚠️  集合 {collection_name} 不存在，正在创建...")
+                print(f"  集合 {collection_name} 不存在，正在创建...")
                 self.client.create_collection(
                     collection_name=collection_name,
                     dimension=1024,  # text-embedding-v4 的维度是 1024
                     metric_type="COSINE",
                     auto_id=True
                 )
-                print(f"✅ 已创建集合 {collection_name}")
+                print(f" 已创建集合 {collection_name}")
             else:
-                print(f"✅ 集合 {collection_name} 已存在")
+                print(f" 集合 {collection_name} 已存在")
         except Exception as e:
-            print(f"❌ 检查/创建集合失败: {e}")
+            print(f" 检查/创建集合失败: {e}")
             raise
     
     def _embed_with_retry(self, text: str, max_retries: int = 5) -> Optional[List[float]]:
@@ -794,12 +794,12 @@ class DataIngester:
                 # 使用带重试的向量化方法
                 vector = self._embed_with_retry(text)
                 if vector is None:
-                    print(f"⚠️  跳过向量化失败的文本: {text[:50]}...")
+                    print(f"  跳过向量化失败的文本: {text[:50]}...")
                     continue
                 
                 # 确保向量维度正确
                 if len(vector) != 1024:
-                    print(f"⚠️  向量维度错误: 期望 1024，实际 {len(vector)}")
+                    print(f"  向量维度错误: 期望 1024，实际 {len(vector)}")
                     continue
                 
                 row = {
@@ -822,10 +822,10 @@ class DataIngester:
                     else:
                         milvus_ids = getattr(result, "ids", [])
                     inserted_count = len(milvus_ids)
-                    print(f"✅ 已插入 {inserted_count}/{len(rows)} 条数据到 {collection_name}")
+                    print(f" 已插入 {inserted_count}/{len(rows)} 条数据到 {collection_name}")
                 except Exception as e:
                     error_msg = str(e)
-                    print(f"❌ 插入失败: {error_msg}")
+                    print(f" 插入失败: {error_msg}")
                     # 打印更详细的错误信息
                     if "field" in error_msg.lower() or "schema" in error_msg.lower():
                         print(f"   提示: 可能是字段结构不匹配，请检查集合 schema")
@@ -844,9 +844,9 @@ class DataIngester:
                                 milvus_ids = result
                             else:
                                 milvus_ids = getattr(result, "ids", [])
-                            print(f"✅ 重试成功，已插入 {len(milvus_ids)} 条数据")
+                            print(f" 重试成功，已插入 {len(milvus_ids)} 条数据")
                         except Exception as e2:
-                            print(f"❌ 重试也失败: {e2}")
+                            print(f" 重试也失败: {e2}")
             
             # 避免API限流
             time.sleep(0.5)
@@ -889,13 +889,13 @@ class DataIngester:
                 # 使用带重试的向量化方法
                 vector = self._embed_with_retry(block["text"])
                 if vector is None:
-                    print(f"⚠️  跳过向量化失败的块: {block.get('title', '未命名')[:50]}...")
+                    print(f"  跳过向量化失败的块: {block.get('title', '未命名')[:50]}...")
                     # all_milvus_ids[original_idx] 保持为 None
                     continue
                 
                 # 确保向量维度正确
                 if len(vector) != 1024:
-                    print(f"⚠️  向量维度错误: 期望 1024，实际 {len(vector)}")
+                    print(f"  向量维度错误: 期望 1024，实际 {len(vector)}")
                     continue
                 
                 # 构建更丰富的source信息（限制长度避免过长）
@@ -939,10 +939,10 @@ class DataIngester:
                             block_idx = row_to_block_idx[j]
                             all_milvus_ids[block_idx] = str(milvus_id)
                     
-                    print(f"✅ 已插入 {len(milvus_ids)}/{len(rows)} 个语义块到 {collection_name}")
+                    print(f" 已插入 {len(milvus_ids)}/{len(rows)} 个语义块到 {collection_name}")
                 except Exception as e:
                     error_msg = str(e)
-                    print(f"❌ 插入失败: {error_msg}")
+                    print(f" 插入失败: {error_msg}")
                     # 打印更详细的错误信息
                     if "field" in error_msg.lower() or "schema" in error_msg.lower():
                         print(f"   提示: 可能是字段结构不匹配，请检查集合 schema")
@@ -965,9 +965,9 @@ class DataIngester:
                                 if j < len(row_to_block_idx):
                                     block_idx = row_to_block_idx[j]
                                     all_milvus_ids[block_idx] = str(milvus_id)
-                            print(f"✅ 重试成功，已插入 {len(milvus_ids)} 个语义块")
+                            print(f" 重试成功，已插入 {len(milvus_ids)} 个语义块")
                         except Exception as e2:
-                            print(f"❌ 重试也失败: {e2}")
+                            print(f" 重试也失败: {e2}")
                     # 失败时保持为 None（已预先分配）
             
             # 避免API限流
@@ -997,12 +997,12 @@ class DataIngester:
                 # 使用带重试的向量化方法
                 vector = self._embed_with_retry(faq["q"])
                 if vector is None:
-                    print(f"⚠️  跳过向量化失败的FAQ: {faq['q'][:50]}...")
+                    print(f"  跳过向量化失败的FAQ: {faq['q'][:50]}...")
                     continue
                 
                 # 确保向量维度正确
                 if len(vector) != 1024:
-                    print(f"⚠️  向量维度错误: 期望 1024，实际 {len(vector)}")
+                    print(f"  向量维度错误: 期望 1024，实际 {len(vector)}")
                     continue
                 
                 row = {
@@ -1027,10 +1027,10 @@ class DataIngester:
                     else:
                         milvus_ids = getattr(result, "ids", [])
                     inserted_count = len(milvus_ids)
-                    print(f"✅ 已插入 {inserted_count}/{len(rows)} 条FAQ")
+                    print(f" 已插入 {inserted_count}/{len(rows)} 条FAQ")
                 except Exception as e:
                     error_msg = str(e)
-                    print(f"❌ FAQ插入失败: {error_msg}")
+                    print(f" FAQ插入失败: {error_msg}")
                     # 打印更详细的错误信息
                     if "field" in error_msg.lower() or "schema" in error_msg.lower():
                         print(f"   提示: 可能是字段结构不匹配，FAQ集合应包含 question, answer, source 字段")
@@ -1048,9 +1048,9 @@ class DataIngester:
                                 milvus_ids = result
                             else:
                                 milvus_ids = getattr(result, "ids", [])
-                            print(f"✅ 重试成功，已插入 {len(milvus_ids)} 条FAQ")
+                            print(f" 重试成功，已插入 {len(milvus_ids)} 条FAQ")
                         except Exception as e2:
-                            print(f"❌ 重试也失败: {e2}")
+                            print(f" 重试也失败: {e2}")
             
             time.sleep(0.5)
 
@@ -1079,7 +1079,7 @@ def crawl_standard_info(urls: List[str], max_pages: int = 50, use_semantic_block
         db_session.commit()
         db_session.refresh(task)
         task_id = task.id
-        print(f"✅ 创建爬取任务 #{task_id}: {task.url}")
+        print(f" 创建爬取任务 #{task_id}: {task.url}")
         
         crawler = WebCrawler(base_url=urls[0] if urls else "")
         processor = TextProcessor(chunk_size=500, chunk_overlap=50)
@@ -1176,7 +1176,7 @@ def crawl_standard_info(urls: List[str], max_pages: int = 50, use_semantic_block
         
         # 提交剩余的 CrawlBlock 记录
         db_session.commit()
-        print(f"✅ 已保存 {len(crawl_blocks)} 个文本块到 MySQL")
+        print(f" 已保存 {len(crawl_blocks)} 个文本块到 MySQL")
         
         # 2. 插入到 Milvus 并获取 IDs
         if use_semantic_blocks and all_blocks:
@@ -1199,7 +1199,7 @@ def crawl_standard_info(urls: List[str], max_pages: int = 50, use_semantic_block
             task.completed_at = datetime.now()
             db_session.commit()
             
-            print(f"✅ 完成！共爬取 {pages_crawled} 页，插入 {len(all_blocks)} 个语义块")
+            print(f" 完成！共爬取 {pages_crawled} 页，插入 {len(all_blocks)} 个语义块")
         elif all_texts:
             # 旧方法：使用 ingest_texts（不返回 IDs，暂时不关联）
             ingester.ingest_texts(
@@ -1215,18 +1215,18 @@ def crawl_standard_info(urls: List[str], max_pages: int = 50, use_semantic_block
             task.completed_at = datetime.now()
             db_session.commit()
             
-            print(f"✅ 完成！共爬取 {pages_crawled} 页，插入 {len(all_texts)} 条文本块")
+            print(f" 完成！共爬取 {pages_crawled} 页，插入 {len(all_texts)} 条文本块")
         else:
             # 没有爬取到数据
             task.status = "failed"
             task.error_message = "未爬取到任何数据"
             task.completed_at = datetime.now()
             db_session.commit()
-            print("⚠️ 未爬取到任何数据")
+            print(" 未爬取到任何数据")
             
     except Exception as e:
         # 错误处理
-        print(f"❌ 爬取失败: {e}")
+        print(f" 爬取失败: {e}")
         try:
             task.status = "failed"
             task.error_message = str(e)
@@ -1258,7 +1258,7 @@ def crawl_academic_info(urls: List[str], max_pages: int = 30):
         db_session.commit()
         db_session.refresh(task)
         task_id = task.id
-        print(f"✅ 创建爬取任务 #{task_id}: {task.url}")
+        print(f" 创建爬取任务 #{task_id}: {task.url}")
         
         crawler = WebCrawler(base_url=urls[0] if urls else "")
         processor = TextProcessor(chunk_size=600, chunk_overlap=50)
@@ -1304,7 +1304,7 @@ def crawl_academic_info(urls: List[str], max_pages: int = 30):
         
         # 提交剩余的 CrawlBlock 记录
         db_session.commit()
-        print(f"✅ 已保存 {len(crawl_blocks)} 个文本块到 MySQL")
+        print(f" 已保存 {len(crawl_blocks)} 个文本块到 MySQL")
         
         # 2. 插入到 Milvus
         if all_texts:
@@ -1321,18 +1321,18 @@ def crawl_academic_info(urls: List[str], max_pages: int = 30):
             task.completed_at = datetime.now()
             db_session.commit()
             
-            print(f"✅ 完成！共爬取 {pages_crawled} 页，插入 {len(all_texts)} 条文本块")
+            print(f" 完成！共爬取 {pages_crawled} 页，插入 {len(all_texts)} 条文本块")
         else:
             # 没有爬取到数据
             task.status = "failed"
             task.error_message = "未爬取到任何数据"
             task.completed_at = datetime.now()
             db_session.commit()
-            print("⚠️ 未爬取到任何数据")
+            print(" 未爬取到任何数据")
             
     except Exception as e:
         # 错误处理
-        print(f"❌ 爬取失败: {e}")
+        print(f" 爬取失败: {e}")
         try:
             task.status = "failed"
             task.error_message = str(e)
@@ -1354,7 +1354,7 @@ def add_faqs_manually(faqs: List[Dict[str, str]]):
     """
     ingester = DataIngester()
     ingester.ingest_faqs(faqs)
-    print(f"✅ 完成！共插入 {len(faqs)} 条FAQ")
+    print(f" 完成！共插入 {len(faqs)} 条FAQ")
 
 
 if __name__ == "__main__":
@@ -1368,10 +1368,10 @@ if __name__ == "__main__":
     # 尝试从配置文件导入
     try:
         from crawl_config import STANDARD_URLS, ACADEMIC_URLS, MANUAL_FAQS, CRAWL_CONFIG
-        print("✅ 已加载配置文件 crawl_config.py")
+        print(" 已加载配置文件 crawl_config.py")
     except ImportError:
-        print("⚠️  未找到 crawl_config.py 文件")
-        print("💡 请先复制 crawl_config_example.py 为 crawl_config.py，并修改其中的URL列表")
+        print("  未找到 crawl_config.py 文件")
+        print(" 请先复制 crawl_config_example.py 为 crawl_config.py，并修改其中的URL列表")
         print("\n使用默认配置（仅作演示，不会实际运行）...")
         STANDARD_URLS = [
             "https://www.tongji.edu.cn/",
@@ -1386,17 +1386,17 @@ if __name__ == "__main__":
             "chunk_size_academic": 600,
             "chunk_overlap": 50,
         }
-        print("❌ 请创建 crawl_config.py 后再运行")
+        print(" 请创建 crawl_config.py 后再运行")
         exit(1)
     
     # 1. 爬取公开标准信息
     if STANDARD_URLS:
         print("\n" + "=" * 60)
-        print("🚀 开始爬取公开标准信息...")
+        print(" 开始爬取公开标准信息...")
         print("=" * 60)
-        print(f"📋 URL数量: {len(STANDARD_URLS)}")
-        print(f"📄 最大页数: {CRAWL_CONFIG.get('max_pages_standard', 50)}")
-        print(f"🔧 使用语义块提取: True")
+        print(f" URL数量: {len(STANDARD_URLS)}")
+        print(f" 最大页数: {CRAWL_CONFIG.get('max_pages_standard', 50)}")
+        print(f" 使用语义块提取: True")
         print()
         
         crawl_standard_info(
@@ -1408,10 +1408,10 @@ if __name__ == "__main__":
     # 2. 爬取学术科研信息
     if ACADEMIC_URLS:
         print("\n" + "=" * 60)
-        print("🚀 开始爬取学术科研信息...")
+        print(" 开始爬取学术科研信息...")
         print("=" * 60)
-        print(f"📋 URL数量: {len(ACADEMIC_URLS)}")
-        print(f"📄 最大页数: {CRAWL_CONFIG.get('max_pages_academic', 30)}")
+        print(f" URL数量: {len(ACADEMIC_URLS)}")
+        print(f" 最大页数: {CRAWL_CONFIG.get('max_pages_academic', 30)}")
         print()
         
         crawl_academic_info(
@@ -1422,14 +1422,14 @@ if __name__ == "__main__":
     # 3. 手动添加FAQ
     if MANUAL_FAQS:
         print("\n" + "=" * 60)
-        print("🚀 开始添加FAQ...")
+        print(" 开始添加FAQ...")
         print("=" * 60)
-        print(f"📋 FAQ数量: {len(MANUAL_FAQS)}")
+        print(f" FAQ数量: {len(MANUAL_FAQS)}")
         print()
         
         add_faqs_manually(MANUAL_FAQS)
     
     print("\n" + "=" * 60)
-    print("✅ 所有任务完成！")
+    print(" 所有任务完成！")
     print("=" * 60)
 

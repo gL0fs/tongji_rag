@@ -42,7 +42,7 @@ def show_counts(client: MilvusClient) -> None:
         return
 
     print("=" * 80)
-    print("📊 各集合记录数量统计：")
+    print(" 各集合记录数量统计：")
     print("=" * 80)
     print(f"{'集合名':40} | {'记录数':>10}")
     print("-" * 80)

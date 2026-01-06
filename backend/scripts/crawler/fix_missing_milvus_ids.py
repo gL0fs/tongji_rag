@@ -66,7 +66,7 @@ def insert_using_preview(
     blocks_to_insert = []
     for block in blocks:
         if not block.text_preview:
-            print(f"  ⚠️  块 #{block.id} 没有 text_preview，跳过")
+            print(f"    块 #{block.id} 没有 text_preview，跳过")
             continue
         
         blocks_to_insert.append({
@@ -80,7 +80,7 @@ def insert_using_preview(
         })
     
     if not blocks_to_insert:
-        print("  ⚠️  没有可插入的块")
+        print("    没有可插入的块")
         return {}
     
     # 插入到 Milvus
@@ -150,14 +150,14 @@ def re_crawl_and_insert(
             # 重新爬取
             html = crawler.fetch_page(url)
             if not html:
-                print(f"  ⚠️  无法获取页面内容，跳过")
+                print(f"    无法获取页面内容，跳过")
                 continue
             
             # 提取语义块
             semantic_blocks = crawler.extract_semantic_blocks(html, url)
             
             if not semantic_blocks:
-                print(f"  ⚠️  未提取到语义块，尝试提取普通文本")
+                print(f"    未提取到语义块，尝试提取普通文本")
                 text = crawler.extract_text(html)
                 if text:
                     semantic_blocks = [{
@@ -167,7 +167,7 @@ def re_crawl_and_insert(
                         "url": url
                     }]
                 else:
-                    print(f"  ⚠️  无法提取文本，跳过")
+                    print(f"    无法提取文本，跳过")
                     continue
             
             # 匹配 blocks：根据 title 和 section 匹配
@@ -242,13 +242,13 @@ def re_crawl_and_insert(
                         db_block = item["db_block"]
                         db_block.milvus_id = milvus_id
                         result[db_block.id] = milvus_id
-                        print(f"  ✅ 块 #{db_block.id} -> Milvus ID: {milvus_id}")
+                        print(f"   块 #{db_block.id} -> Milvus ID: {milvus_id}")
                 
                 db_session.commit()
-                print(f"  ✅ 成功处理 {len([r for r in result.values() if r])} 个块")
+                print(f"   成功处理 {len([r for r in result.values() if r])} 个块")
         
         except Exception as e:
-            print(f"  ❌ 处理失败: {e}")
+            print(f"   处理失败: {e}")
             import traceback
             traceback.print_exc()
             continue
@@ -270,7 +270,7 @@ def main():
         null_blocks = get_null_milvus_id_blocks(db_session)
         
         if not null_blocks:
-            print("✅ 没有需要修复的记录！")
+            print(" 没有需要修复的记录！")
             return
         
         print(f"找到 {len(null_blocks)} 条记录需要修复")
@@ -316,16 +316,16 @@ def main():
         # 5. 再次检查
         remaining = get_null_milvus_id_blocks(db_session)
         if remaining:
-            print(f"\n⚠️  仍有 {len(remaining)} 条记录未修复")
+            print(f"\n  仍有 {len(remaining)} 条记录未修复")
             print("可能原因：")
             print("  - URL 无法访问")
             print("  - 页面内容已变化")
             print("  - 向量化失败")
         else:
-            print("\n✅ 所有记录已成功修复！")
+            print("\n 所有记录已成功修复！")
     
     except Exception as e:
-        print(f"\n❌ 修复过程出错: {e}")
+        print(f"\n 修复过程出错: {e}")
         import traceback
         traceback.print_exc()
         db_session.rollback()

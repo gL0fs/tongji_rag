@@ -25,7 +25,7 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
         show_full_text: 是否显示完整文本（而不是只显示前400字符）
     """
     print(f"\n{'='*80}")
-    print(f"🔍 检查 Milvus 中的完整文本（集合: {collection_name}）")
+    print(f"检查 Milvus 中的完整文本（集合: {collection_name}）")
     print(f"{'='*80}")
     
     try:
@@ -36,11 +36,11 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
         # 检查集合是否存在
         existing_cols = client.list_collections()
         if collection_name not in existing_cols:
-            print(f"❌ 集合 {collection_name} 不存在")
+            print(f" 集合 {collection_name} 不存在")
             print(f"   现有集合: {existing_cols}")
             return
         
-        print(f"✅ 集合 {collection_name} 存在")
+        print(f" 集合 {collection_name} 存在")
         
         # 判断是否为 FAQ 集合（根据集合名称或配置）
         is_faq_collection = collection_name == settings.COLLECTION_FAQ
@@ -56,17 +56,17 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
         try:
             stats = client.get_collection_stats(collection_name)
             entity_count = stats.get("row_count", 0)
-            print(f"📊 集合中的实体数量: {entity_count}")
+            print(f" 集合中的实体数量: {entity_count}")
         except Exception as e:
-            print(f"⚠️  无法获取统计信息: {e}")
+            print(f"  无法获取统计信息: {e}")
         
         # 尝试使用 query 方法查询数据
         try:
             if filter_expr:
-                print(f"\n📄 使用过滤条件查询（限制 {limit} 条）...")
+                print(f"\n 使用过滤条件查询（限制 {limit} 条）...")
                 print(f"   过滤条件: {filter_expr}")
             else:
-                print(f"\n📄 查询前 {limit} 条记录...")
+                print(f"\n 查询前 {limit} 条记录...")
             
             results = client.query(
                 collection_name=collection_name,
@@ -76,10 +76,10 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
             )
             
             if not results:
-                print("⚠️  集合中没有数据")
+                print("  集合中没有数据")
                 return
             
-            print(f"✅ 找到 {len(results)} 条记录\n")
+            print(f" 找到 {len(results)} 条记录\n")
             
             for i, result in enumerate(results, 1):
                 print(f"【记录 {i}】")
@@ -100,7 +100,7 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
                     answer = result.get('answer', '')
                     
                     if question:
-                        print(f"  ❓ 问题长度: {len(question)} 字符")
+                        print(f"   问题长度: {len(question)} 字符")
                         if show_full_text:
                             print(f"  完整问题:")
                             print(f"  {'─'*76}")
@@ -121,7 +121,7 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
                                 print(f"  ... (还有 {len(question) - 400} 字符)")
                             print(f"  {'─'*76}")
                     else:
-                        print("  ❓ 问题: (空)")
+                        print("   问题: (空)")
                     
                     if answer:
                         print(f"  💡 答案长度: {len(answer)} 字符")
@@ -145,7 +145,7 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
                                 print(f"  ... (还有 {len(answer) - 400} 字符)")
                             print(f"  {'─'*76}")
                     else:
-                        print("  💡 答案: (空)")
+                        print("   答案: (空)")
                 else:
                     # 普通文本格式
                     text = result.get('text', '')
@@ -179,7 +179,7 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
                             has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text[:500])
                             chinese_count = sum(1 for char in text[:500] if '\u4e00' <= char <= '\u9fff')
                             print(f"  {'─'*76}")
-                            print(f"  {'✅ 包含中文' if has_chinese else '❌ 不包含中文（可能是乱码）'}")
+                            print(f"  {' 包含中文' if has_chinese else '❌ 不包含中文（可能是乱码）'}")
                             if has_chinese:
                                 print(f"  前500字符中中文数量: {chinese_count}")
                     else:
@@ -188,14 +188,14 @@ def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="",
                 print(f"  {'─'*76}\n")
         
         except Exception as e:
-            print(f"❌ 查询失败: {e}")
-            print(f"\n💡 提示: 如果查询失败，请使用 Milvus Web UI 查看数据:")
+            print(f" 查询失败: {e}")
+            print(f"\n 提示: 如果查询失败，请使用 Milvus Web UI 查看数据:")
             print(f"   http://localhost:8001")
             import traceback
             traceback.print_exc()
         
     except Exception as e:
-        print(f"❌ 连接 Milvus 失败: {e}")
+        print(f" 连接 Milvus 失败: {e}")
         import traceback
         traceback.print_exc()
 

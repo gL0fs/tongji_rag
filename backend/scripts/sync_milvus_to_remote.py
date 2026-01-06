@@ -72,7 +72,7 @@ class MilvusSync:
     def connect(self):
         """连接到本地和远程 Milvus"""
         print(f"\n{'='*80}")
-        print("🔌 正在连接 Milvus...")
+        print(" 正在连接 Milvus...")
         print(f"{'='*80}")
         
         # 连接本地
@@ -81,9 +81,9 @@ class MilvusSync:
             print(f"📡 连接本地 Milvus: {local_uri}")
             self.local_client = MilvusClient(uri=local_uri)
             local_cols = self.local_client.list_collections()
-            print(f"✅ 本地连接成功，找到 {len(local_cols)} 个集合: {local_cols}")
+            print(f" 本地连接成功，找到 {len(local_cols)} 个集合: {local_cols}")
         except Exception as e:
-            print(f"❌ 本地连接失败: {e}")
+            print(f" 本地连接失败: {e}")
             raise
         
         # 连接远程
@@ -92,9 +92,9 @@ class MilvusSync:
             print(f"📡 连接远程 Milvus: {remote_uri}")
             self.remote_client = MilvusClient(uri=remote_uri)
             remote_cols = self.remote_client.list_collections()
-            print(f"✅ 远程连接成功，现有 {len(remote_cols)} 个集合: {remote_cols}")
+            print(f" 远程连接成功，现有 {len(remote_cols)} 个集合: {remote_cols}")
         except Exception as e:
-            print(f"❌ 远程连接失败: {e}")
+            print(f" 远程连接失败: {e}")
             print(f"   请检查:")
             print(f"   1. 远程服务器地址是否正确: {self.remote_host}:{self.remote_port}")
             print(f"   2. 远程 Milvus 服务是否运行")
@@ -112,10 +112,10 @@ class MilvusSync:
         existing_cols = self.remote_client.list_collections()
         
         if collection_name in existing_cols:
-            print(f"  ✅ 远程集合 {collection_name} 已存在")
+            print(f"   远程集合 {collection_name} 已存在")
             return
         
-        print(f"  📦 创建远程集合 {collection_name}...")
+        print(f"   创建远程集合 {collection_name}...")
         try:
             self.remote_client.create_collection(
                 collection_name=collection_name,
@@ -123,9 +123,9 @@ class MilvusSync:
                 metric_type="COSINE",  # 相似度度量方式
                 auto_id=True  # 自动生成 ID
             )
-            print(f"  ✅ 远程集合 {collection_name} 创建成功")
+            print(f"   远程集合 {collection_name} 创建成功")
         except Exception as e:
-            print(f"  ❌ 创建远程集合失败: {e}")
+            print(f"   创建远程集合失败: {e}")
             raise
     
     def get_collection_stats(self, client: MilvusClient, collection_name: str) -> int:
@@ -134,7 +134,7 @@ class MilvusSync:
             stats = client.get_collection_stats(collection_name)
             return stats.get("row_count", 0)
         except Exception as e:
-            print(f"  ⚠️  无法获取统计信息: {e}")
+            print(f"    无法获取统计信息: {e}")
             return 0
     
     def read_collection_data(self, collection_name: str, batch_size: int = 1000) -> List[Dict[str, Any]]:
@@ -148,7 +148,7 @@ class MilvusSync:
         Returns:
             所有数据的列表
         """
-        print(f"\n📖 正在读取本地集合 {collection_name} 的数据...")
+        print(f"\n 正在读取本地集合 {collection_name} 的数据...")
         
         # 判断集合类型
         is_faq = collection_name == self.faq_collection
@@ -162,10 +162,10 @@ class MilvusSync:
         # 获取总数
         total_count = self.get_collection_stats(self.local_client, collection_name)
         if total_count == 0:
-            print(f"  ⚠️  集合 {collection_name} 中没有数据")
+            print(f"    集合 {collection_name} 中没有数据")
             return []
         
-        print(f"  📊 总记录数: {total_count}")
+        print(f"   总记录数: {total_count}")
         
         # 直接读取所有数据（MilvusClient 支持一次性读取）
         all_data = []
@@ -183,10 +183,10 @@ class MilvusSync:
                     output_fields=output_fields
                 )
                 all_data = results
-                print(f"  ✅ 成功读取 {len(all_data)} 条记录")
+                print(f"   成功读取 {len(all_data)} 条记录")
             else:
                 # 数据量大，需要分批读取
-                print(f"  📦 数据量较大，分批读取（每批最多 {batch_size} 条）...")
+                print(f"   数据量较大，分批读取（每批最多 {batch_size} 条）...")
                 all_data = []
                 last_max_id = None
                 read_count = 0
@@ -227,11 +227,11 @@ class MilvusSync:
                         if len(results) < batch_limit:
                             break
                 
-                print(f"  ✅ 分批读取完成，共 {len(all_data)} 条记录")
+                print(f"   分批读取完成，共 {len(all_data)} 条记录")
         except Exception as e:
-            print(f"  ❌ 读取数据时出错: {e}")
+            print(f"   读取数据时出错: {e}")
             # 如果一次性读取失败，尝试分批读取
-            print(f"  🔄 尝试分批读取...")
+            print(f"   尝试分批读取...")
             try:
                 # 使用迭代方式：每次读取一批，直到没有更多数据
                 all_data = []
@@ -263,9 +263,9 @@ class MilvusSync:
                     if len(all_data) >= total_count:
                         break
                 
-                print(f"  ✅ 分批读取成功，共 {len(all_data)} 条记录")
+                print(f"   分批读取成功，共 {len(all_data)} 条记录")
             except Exception as e2:
-                print(f"  ❌ 分批读取也失败: {e2}")
+                print(f"   分批读取也失败: {e2}")
                 import traceback
                 traceback.print_exc()
                 return []
@@ -283,11 +283,11 @@ class MilvusSync:
             batch_size: 每批插入的数量
         """
         if not data:
-            print(f"  ⚠️  没有数据需要上传")
+            print(f"    没有数据需要上传")
             return
         
-        print(f"\n📤 正在上传数据到远程集合 {collection_name}...")
-        print(f"  📊 总记录数: {len(data)}")
+        print(f"\n 正在上传数据到远程集合 {collection_name}...")
+        print(f"   总记录数: {len(data)}")
         
         # 判断集合类型
         is_faq = collection_name == self.faq_collection
@@ -323,15 +323,15 @@ class MilvusSync:
                     if HAS_TQDM:
                         pbar.update(len(batch))
                     else:
-                        print("✅")
+                        print("done")
                 except Exception as e:
                     if not HAS_TQDM:
-                        print("❌")
-                    print(f"  ❌ 插入批次失败 (索引 {i}-{i+len(batch)-1}): {e}")
+                        print("erro")
+                    print(f"   插入批次失败 (索引 {i}-{i+len(batch)-1}): {e}")
                     # 继续处理下一批
                     continue
         
-        print(f"  ✅ 成功上传 {total_inserted}/{len(prepared_data)} 条记录")
+        print(f"   成功上传 {total_inserted}/{len(prepared_data)} 条记录")
         return total_inserted
     
     def sync_collection(self, collection_name: str, skip_existing: bool = False):
@@ -343,19 +343,19 @@ class MilvusSync:
             skip_existing: 如果远程集合已存在数据，是否跳过
         """
         print(f"\n{'='*80}")
-        print(f"🔄 同步集合: {collection_name}")
+        print(f" 同步集合: {collection_name}")
         print(f"{'='*80}")
         
         # 检查本地集合是否存在
         local_cols = self.local_client.list_collections()
         if collection_name not in local_cols:
-            print(f"❌ 本地集合 {collection_name} 不存在，跳过")
+            print(f" 本地集合 {collection_name} 不存在，跳过")
             return
         
         # 检查本地是否有数据
         local_count = self.get_collection_stats(self.local_client, collection_name)
         if local_count == 0:
-            print(f"⚠️  本地集合 {collection_name} 没有数据，跳过")
+            print(f"  本地集合 {collection_name} 没有数据，跳过")
             return
         
         # 判断集合类型
@@ -368,16 +368,16 @@ class MilvusSync:
         remote_count = self.get_collection_stats(self.remote_client, collection_name)
         if remote_count > 0:
             if skip_existing:
-                print(f"⚠️  远程集合 {collection_name} 已有 {remote_count} 条数据，跳过")
+                print(f"  远程集合 {collection_name} 已有 {remote_count} 条数据，跳过")
                 return
             else:
-                print(f"⚠️  远程集合 {collection_name} 已有 {remote_count} 条数据，将继续添加")
+                print(f"  远程集合 {collection_name} 已有 {remote_count} 条数据，将继续添加")
         
         # 读取本地数据
         local_data = self.read_collection_data(collection_name)
         
         if not local_data:
-            print(f"⚠️  没有数据需要同步")
+            print(f"  没有数据需要同步")
             return
         
         # 上传到远程
@@ -385,7 +385,7 @@ class MilvusSync:
         
         # 验证
         final_remote_count = self.get_collection_stats(self.remote_client, collection_name)
-        print(f"\n✅ 同步完成！")
+        print(f"\n 同步完成！")
         print(f"   本地记录数: {local_count}")
         print(f"   远程记录数: {final_remote_count}")
     
@@ -411,23 +411,23 @@ class MilvusSync:
         collections_to_sync = [col for col in all_collections if col in local_cols]
         
         if not collections_to_sync:
-            print("❌ 没有找到需要同步的集合")
+            print(" 没有找到需要同步的集合")
             return
         
-        print(f"\n📋 将同步以下集合: {collections_to_sync}")
+        print(f"\n 将同步以下集合: {collections_to_sync}")
         
         # 逐个同步
         for collection_name in collections_to_sync:
             try:
                 self.sync_collection(collection_name, skip_existing)
             except Exception as e:
-                print(f"❌ 同步集合 {collection_name} 时出错: {e}")
+                print(f"同步集合 {collection_name} 时出错: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
         
         print(f"\n{'='*80}")
-        print("🎉 所有集合同步完成！")
+        print(" 所有集合同步完成！")
         print(f"{'='*80}")
 
 
@@ -483,9 +483,9 @@ def main():
             skip_existing=args.skip_existing
         )
     except KeyboardInterrupt:
-        print("\n\n⚠️  用户中断操作")
+        print("\n\n  用户中断操作")
     except Exception as e:
-        print(f"\n❌ 同步过程中出错: {e}")
+        print(f"\n 同步过程中出错: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

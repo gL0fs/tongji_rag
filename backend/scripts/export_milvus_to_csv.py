@@ -68,18 +68,18 @@ class MilvusExporter:
     def connect(self):
         """连接到本地 Milvus"""
         print(f"\n{'='*80}")
-        print("🔌 正在连接 Milvus...")
+        print(" 正在连接 Milvus...")
         print(f"{'='*80}")
         
         # 连接本地
         try:
             local_uri = f"http://{self.local_host}:{self.local_port}"
-            print(f"📡 连接本地 Milvus: {local_uri}")
+            print(f" 连接本地 Milvus: {local_uri}")
             self.local_client = MilvusClient(uri=local_uri)
             local_cols = self.local_client.list_collections()
-            print(f"✅ 本地连接成功，找到 {len(local_cols)} 个集合: {local_cols}")
+            print(f" 本地连接成功，找到 {len(local_cols)} 个集合: {local_cols}")
         except Exception as e:
-            print(f"❌ 本地连接失败: {e}")
+            print(f" 本地连接失败: {e}")
             raise
     
     def get_collection_stats(self, collection_name: str) -> int:
@@ -100,10 +100,10 @@ class MilvusExporter:
             )
             if res and isinstance(res, list) and "count(*)" in res[0]:
                 return int(res[0]["count(*)"])
-            print("  ⚠️  当前客户端不支持统计接口，count(*) 也未返回，继续尝试直接读取数据")
+            print("    当前客户端不支持统计接口，count(*) 也未返回，继续尝试直接读取数据")
             return 0
         except Exception as e:
-            print(f"  ⚠️  无法获取统计信息: {e}")
+            print(f"    无法获取统计信息: {e}")
             return 0
     
     def read_collection_data(self, collection_name: str, batch_size: int = 1000) -> List[Dict[str, Any]]:
@@ -117,7 +117,7 @@ class MilvusExporter:
         Returns:
             所有数据的列表
         """
-        print(f"\n📖 正在读取集合 {collection_name} 的数据...")
+        print(f"\n 正在读取集合 {collection_name} 的数据...")
         
         # 判断集合类型
         is_faq = collection_name == self.faq_collection
@@ -131,9 +131,9 @@ class MilvusExporter:
         # 获取总数（可能失败返回 0）
         total_count = self.get_collection_stats(collection_name)
         if total_count > 0:
-            print(f"  📊 总记录数: {total_count}")
+            print(f"   总记录数: {total_count}")
         else:
-            print("  ⚠️  无法获取总数或总数为 0，直接尝试读取数据")
+            print("    无法获取总数或总数为 0，直接尝试读取数据")
         
         # 分批读取数据
         all_data = []
@@ -150,13 +150,13 @@ class MilvusExporter:
             )
             all_data = results or []
             if not all_data:
-                print(f"  ⚠️  集合 {collection_name} 中没有数据")
+                print(f"    集合 {collection_name} 中没有数据")
                 return []
-            print(f"  ✅ 成功读取 {len(all_data)} 条记录")
+            print(f"   成功读取 {len(all_data)} 条记录")
             
             # 如果估计的总数大于 max_limit，则继续分批读取剩余数据
             if total_count > max_limit:
-                print(f"  📦 数据量较大，继续分批读取（每批最多 {batch_size} 条）...")
+                print(f"   数据量较大，继续分批读取（每批最多 {batch_size} 条）...")
                 last_max_id = max(r["id"] for r in all_data)
                 read_count = len(all_data)
                 
@@ -185,9 +185,9 @@ class MilvusExporter:
                         if len(results) < batch_limit:
                             break
                 
-                print(f"  ✅ 分批读取完成，共 {len(all_data)} 条记录")
+                print(f"   分批读取完成，共 {len(all_data)} 条记录")
         except Exception as e:
-            print(f"  ❌ 读取数据时出错: {e}")
+            print(f"   读取数据时出错: {e}")
             import traceback
             traceback.print_exc()
             return []
@@ -281,11 +281,11 @@ class MilvusExporter:
         # 读取数据
         data = self.read_collection_data(collection_name)
         if not data:
-            print(f"  ⚠️  集合 {collection_name} 没有数据，跳过导出")
+            print(f"    集合 {collection_name} 没有数据，跳过导出")
             return
         
         # 准备数据
-        print(f"\n📝 正在准备数据...")
+        print(f"\n 正在准备数据...")
         prepared_data = self.prepare_data_for_csv(
             data,
             include_vector=include_vector,
@@ -293,7 +293,7 @@ class MilvusExporter:
         )
         
         if not prepared_data:
-            print(f"  ⚠️  没有数据需要导出")
+            print(f"    没有数据需要导出")
             return
         
         # 确定输出文件名
@@ -312,7 +312,7 @@ class MilvusExporter:
         fieldnames = field_order + extra_fields
         
         # 写入 CSV
-        print(f"\n💾 正在导出到 {output_file}...")
+        print(f"\n 正在导出到 {output_file}...")
         try:
             with open(output_file, 'w', newline='', encoding='utf-8-sig') as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -325,12 +325,12 @@ class MilvusExporter:
                             pbar.update(1)
             
             file_size = output_file.stat().st_size / 1024 / 1024  # MB
-            print(f"  ✅ 导出成功！")
-            print(f"  📄 文件: {output_file}")
-            print(f"  📊 记录数: {len(prepared_data)}")
-            print(f"  💾 文件大小: {file_size:.2f} MB")
+            print(f"   导出成功！")
+            print(f"   文件: {output_file}")
+            print(f"   记录数: {len(prepared_data)}")
+            print(f"   文件大小: {file_size:.2f} MB")
         except Exception as e:
-            print(f"  ❌ 导出失败: {e}")
+            print(f"   导出失败: {e}")
             import traceback
             traceback.print_exc()
     
@@ -360,11 +360,11 @@ class MilvusExporter:
             collections = [col for col in all_collections if col in existing_collections]
         
         if not collections:
-            print("  ⚠️  没有找到要导出的集合")
+            print("    没有找到要导出的集合")
             return
         
         print(f"\n{'='*80}")
-        print(f"📤 开始导出 {len(collections)} 个集合到 {output_dir}")
+        print(f" 开始导出 {len(collections)} 个集合到 {output_dir}")
         print(f"{'='*80}")
         
         for i, collection_name in enumerate(collections, 1):
@@ -377,11 +377,11 @@ class MilvusExporter:
                     for_import=for_import,
                 )
             except Exception as e:
-                print(f"  ❌ 导出集合 {collection_name} 时出错: {e}")
+                print(f"   导出集合 {collection_name} 时出错: {e}")
                 continue
         
         print(f"\n{'='*80}")
-        print("✅ 导出完成！")
+        print(" 导出完成！")
         print(f"{'='*80}")
 
 
@@ -466,10 +466,10 @@ def main():
             for_import=args.for_import,
         )
     except KeyboardInterrupt:
-        print("\n\n⚠️  用户中断操作")
+        print("\n\n  用户中断操作")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ 发生错误: {e}")
+        print(f"\n 发生错误: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

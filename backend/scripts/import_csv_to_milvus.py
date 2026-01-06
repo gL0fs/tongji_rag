@@ -114,7 +114,7 @@ class MilvusImporter:
                 arr = [float(x) for x in v.split(",") if x.strip()]
             return [float(x) for x in arr]
         except Exception as e:
-            print(f"  ⚠️ 无法解析向量字段，原始值已被丢弃: {e}")
+            print(f"   无法解析向量字段，原始值已被丢弃: {e}")
             return None
 
     def _prepare_row(self, raw: Dict[str, Any], collection_name: str) -> Dict[str, Any]:
@@ -173,7 +173,7 @@ class MilvusImporter:
         db.add(task)
         db.commit()
         db.refresh(task)
-        print(f"✅ 创建导入任务 #{task.id}: {task.url}")
+        print(f" 创建导入任务 #{task.id}: {task.url}")
         return task
 
     def _build_crawl_block_from_row(
@@ -234,17 +234,17 @@ class MilvusImporter:
         """将单个 CSV 文件导入指定集合，并同步写入 MySQL 中的 CrawlBlock"""
         assert self.client is not None, "Milvus client 未连接，请先调用 connect()"
         print("\n" + "-" * 80)
-        print(f"📥 正在导入 CSV: {csv_path}")
-        print(f"📚 目标集合: {collection_name}")
+        print(f" 正在导入 CSV: {csv_path}")
+        print(f" 目标集合: {collection_name}")
 
         if not csv_path.exists():
-            print(f"  ❌ 文件不存在，跳过: {csv_path}")
+            print(f"   文件不存在，跳过: {csv_path}")
             return
 
         # 简单检查集合是否存在
         existing_cols = self.client.list_collections()
         if collection_name not in existing_cols:
-            print(f"  ⚠️ 集合 {collection_name} 不存在，将跳过导入。")
+            print(f"   集合 {collection_name} 不存在，将跳过导入。")
             print("     请先通过 init_milvus.py 或其它脚本创建对应集合。")
             return
 
@@ -265,7 +265,7 @@ class MilvusImporter:
             with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
                 reader = csv.DictReader(f)
                 fieldnames = reader.fieldnames or []
-                print(f"  📑 检测到字段: {fieldnames}")
+                print(f"   检测到字段: {fieldnames}")
 
                 for raw_row in reader:
                     prepared = self._prepare_row(raw_row, collection_name)
@@ -307,7 +307,7 @@ class MilvusImporter:
                             db.commit()
 
                         total += len(rows_batch)
-                        print(f"  ✅ 已插入 {total} 条记录...")
+                        print(f"   已插入 {total} 条记录...")
                         rows_batch = []
                         pending_blocks_batch = []
 
@@ -333,11 +333,11 @@ class MilvusImporter:
             task.completed_at = datetime.now()
             db.commit()
 
-            print(f"  🎉 导入完成，合计插入 {total} 条记录到集合 {collection_name}")
-            print(f"  🗄️ 同步写入 MySQL: CrawlTask #{task.id}, CrawlBlock 数量 {len(crawl_blocks)}")
+            print(f"   导入完成，合计插入 {total} 条记录到集合 {collection_name}")
+            print(f"   同步写入 MySQL: CrawlTask #{task.id}, CrawlBlock 数量 {len(crawl_blocks)}")
 
         except Exception as e:  # noqa: BLE001
-            print(f"  ❌ 导入 {csv_path} 过程中发生错误: {e}")
+            print(f"   导入 {csv_path} 过程中发生错误: {e}")
             try:
                 task.status = "failed"
                 task.error_message = str(e)
@@ -376,11 +376,11 @@ class MilvusImporter:
                 targets.append((csv_path, collection_name))
 
         if not targets:
-            print(f"⚠️ 目录 {input_dir} 下没有找到任何 CSV 文件")
+            print(f" 目录 {input_dir} 下没有找到任何 CSV 文件")
             return
 
         print("\n" + "=" * 80)
-        print(f"📥 即将导入 {len(targets)} 个 CSV 到 Milvus：")
+        print(f" 即将导入 {len(targets)} 个 CSV 到 Milvus：")
         for path, col in targets:
             print(f"  - {path.name}  ->  {col}")
         print("=" * 80)
@@ -444,10 +444,10 @@ def main() -> None:
             batch_size=args.batch_size,
         )
     except KeyboardInterrupt:
-        print("\n⚠️ 用户中断操作")
+        print("\n 用户中断操作")
         sys.exit(1)
     except Exception as e:  # noqa: BLE001
-        print(f"\n❌ 导入过程中发生错误: {e}")
+        print(f"\n 导入过程中发生错误: {e}")
         import traceback
 
         traceback.print_exc()
