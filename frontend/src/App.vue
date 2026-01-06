@@ -60,6 +60,13 @@ const visitorExampleQuestions = [
   '2025本科招生简章'
 ];
 
+const visitorPopularQuestions = [
+  '同济大学的校训是什么？',
+  '同济大学创建于哪一年？',
+  '同济大学是"985""211"高校吗？',
+  '同济大学的土木工程在全国处于什么水平？'
+];
+
 // 加载访客会话列表
 const loadVisitorSessions = async () => {
   try {
@@ -1056,7 +1063,7 @@ onMounted(async () => {
               <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">热门公开问题</h4>
               <div class="space-y-2">
                 <button
-                  v-for="q in ['四平路校区地图', '校车时刻表(仅公开版)', '2025本科招生简章']"
+                  v-for="q in visitorPopularQuestions"
                   :key="q"
                   @click="handleVisitorSend(q)"
                   class="w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 hover:border-green-200 hover:text-green-700 cursor-pointer transition-colors flex items-center justify-between group text-left"
@@ -1132,14 +1139,20 @@ onMounted(async () => {
                 <Search size="14" /> 快速访问
               </h4>
               <div class="space-y-2">
-                <button
-                  v-for="item in ['IEEE Xplore', 'CNKI 数据库', '科研年报']"
-                  :key="item"
-                  class="w-full p-3 bg-white border border-purple-200 text-purple-700 rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-between group text-left"
+                <a
+                  v-for="service in [
+                    { name: '学术知识库', url: 'https://ir.tongji.edu.cn/tongji/' },
+                    { name: '同济大学图书馆', url: 'https://www.lib.tongji.edu.cn/' }
+                  ]"
+                  :key="service.name"
+                  :href="service.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-full p-3 bg-white border border-purple-200 text-purple-700 rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-between group text-left hover:bg-purple-50 hover:border-purple-300"
                 >
-                  <span>{{ item }}</span>
+                  <span>{{ service.name }}</span>
                   <ChevronRight size="12" class="opacity-100 transition-opacity" />
-                </button>
+                </a>
               </div>
             </div>
           </template>
@@ -1215,14 +1228,21 @@ onMounted(async () => {
             <FileText size="14" /> 常用服务
           </h4>
           <div class="space-y-2">
-            <button
-              v-for="item in ['成绩查询', '选课系统', '图书馆', '校园卡']"
-              :key="item"
-              class="w-full p-3 bg-white border border-blue-200 text-blue-700 rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-between group text-left"
+            <a
+              v-for="service in [
+                { name: '教学信息管理系统', url: 'https://1.tongji.edu.cn/' },
+                { name: 'canvas', url: 'https://canvas.tongji.edu.cn/' },
+                { name: '同济邮箱', url: 'https://mail.tongji.edu.cn/' }
+              ]"
+              :key="service.name"
+              :href="service.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="w-full p-3 bg-white border border-blue-200 text-blue-700 rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-between group text-left hover:bg-blue-50 hover:border-blue-300"
             >
-              <span>{{ item }}</span>
+              <span>{{ service.name }}</span>
               <ChevronRight size="12" class="opacity-100 transition-opacity" />
-            </button>
+            </a>
           </div>
         </div>
           </template>

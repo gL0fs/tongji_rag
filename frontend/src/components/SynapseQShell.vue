@@ -224,18 +224,6 @@ const showWelcome = computed(() => {
                 <p class="text-gray-500 text-lg">{{ welcomeDescription }}</p>
               </div>
             </div>
-            
-            <!-- Example Questions -->
-            <div v-if="exampleQuestions.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
-              <button
-                v-for="(question, idx) in exampleQuestions"
-                :key="idx"
-                @click="handleExampleClick(question)"
-                class="p-4 text-left bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all text-sm text-gray-700 hover:text-blue-600"
-              >
-                {{ question }}
-              </button>
-            </div>
           </div>
         </div>
         
