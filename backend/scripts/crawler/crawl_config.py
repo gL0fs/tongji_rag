@@ -7,38 +7,32 @@
 # 1. 公开标准信息 (rag_standard)
 # ==========================================
 STANDARD_URLS = [
-    
-    #以下均已爬取
-    # "https://www.tongji.edu.cn/xxgk1/xxjj1.htm",  # 同济大学官网首页
-    # "https://www.tongji.edu.cn/xxgk1/xxzc.htm",
-    # "https://www.tongji.edu.cn/xxgk1/lsyg1.htm",
-    # "https://www.tongji.edu.cn/xxgk1/tjgl.htm",
-    # "https://www.tongji.edu.cn/xxgk1/xrld1.htm",
-    # "https://www.tongji.edu.cn/xxgk1/lrld1.htm",
-    #"https://news.tongji.edu.cn/",
-    # 添加更多公开信息URL...
+    "https://www.tongji.edu.cn/xxgk1/xxjj1.htm",  # 同济大学官网首页
+    "https://www.tongji.edu.cn/xxgk1/xxzc.htm",
+    "https://www.tongji.edu.cn/xxgk1/lsyg1.htm",
+    "https://www.tongji.edu.cn/xxgk1/tjgl.htm",
+    "https://www.tongji.edu.cn/xxgk1/xrld1.htm",
+    "https://www.tongji.edu.cn/xxgk1/lrld1.htm",
+    "https://news.tongji.edu.cn/",
 ]
 
 # ==========================================
 # 2. 学术科研信息 (rag_knowledge)
 # ==========================================
 ACADEMIC_URLS = [
-    
-    #以下均已爬取
-    # "https://www.tongji.edu.cn/info/1155/20365.htm",  # 科研成果与知识产权
-    # "https://www.tongji.edu.cn/info/1156/24322.htm",
-    # "https://www.tongji.edu.cn/info/1153/20345.htm", #科研项目概况
-    # "https://www.tongji.edu.cn/info/1153/20343.htm", #新立重大项目
-    # "https://www.tongji.edu.cn/info/1130/20349.htm", #政府批建机构
-    # "https://www.tongji.edu.cn/info/1130/20347.htm", #联合共建机构
-    # "https://www.tongji.edu.cn/info/1154/20355.htm", #科研地方合作
-    # "https://www.tongji.edu.cn/info/1154/20353.htm", #科研企业合作
-    # "https://www.tongji.edu.cn/info/1154/20351.htm", #科研国际合作
-    # "https://www.tongji.edu.cn/info/1154/20349.htm", #科研成果获奖
-    # "https://www.tongji.edu.cn/info/1155/20363.htm", #科研专利管理
-    # "https://www.tongji.edu.cn/info/1155/20361.htm", #科研技术转移
-    # "https://www.tongji.edu.cn/kxyj1/xsqk.htm",      #学术期刊
-    # 添加更多学术相关URL...
+    "https://www.tongji.edu.cn/info/1155/20365.htm",  # 科研成果与知识产权
+    "https://www.tongji.edu.cn/info/1156/24322.htm",
+    "https://www.tongji.edu.cn/info/1153/20345.htm", #科研项目概况
+    "https://www.tongji.edu.cn/info/1153/20343.htm", #新立重大项目
+    "https://www.tongji.edu.cn/info/1130/20349.htm", #政府批建机构
+    "https://www.tongji.edu.cn/info/1130/20347.htm", #联合共建机构
+    "https://www.tongji.edu.cn/info/1154/20355.htm", #科研地方合作
+    "https://www.tongji.edu.cn/info/1154/20353.htm", #科研企业合作
+    "https://www.tongji.edu.cn/info/1154/20351.htm", #科研国际合作
+    "https://www.tongji.edu.cn/info/1154/20349.htm", #科研成果获奖
+    "https://www.tongji.edu.cn/info/1155/20363.htm", #科研专利管理
+    "https://www.tongji.edu.cn/info/1155/20361.htm", #科研技术转移
+    "https://www.tongji.edu.cn/kxyj1/xsqk.htm",      #学术期刊
 ]
 
 # ==========================================
@@ -47,26 +41,26 @@ ACADEMIC_URLS = [
 # 可以手动添加FAQ，也可以从网页爬取后转换为FAQ格式
 MANUAL_FAQS = [
     #以下已添加请勿重复
-    # {
-    #     "q": "同济大学校训是什么？",
-    #     "a": "同济大学的校训是：同舟共济。",
-    #     "source": "校训办"
-    # },
-    # {
-    #     "q": "嘉定校区地址在哪里？",
-    #     "a": "嘉定校区位于上海市嘉定区曹安公路4800号。",
-    #     "source": "保卫处"
-    # },
-    # {
-    #     "q": "如何申请访客入校？",
-    #     "a": "请通过同济大学官方微信公众号进行访客预约。",
-    #     "source": "保卫处"
-    # },
-    # {
-    #     "q": "图书馆开放时间是什么？",
-    #     "a": "图书馆开放时间：周一至周日 8:00-22:00，节假日另行通知。",
-    #     "source": "图书馆"
-    # },
+    {
+        "q": "同济大学校训是什么？",
+        "a": "同济大学的校训是：同舟共济。",
+        "source": "校训办"
+    },
+    {
+        "q": "嘉定校区地址在哪里？",
+        "a": "嘉定校区位于上海市嘉定区曹安公路4800号。",
+        "source": "保卫处"
+    },
+    {
+        "q": "如何申请访客入校？",
+        "a": "请通过同济大学官方微信公众号进行访客预约。",
+        "source": "保卫处"
+    },
+    {
+        "q": "图书馆开放时间是什么？",
+        "a": "图书馆开放时间：周一至周日 8:00-22:00，节假日另行通知。",
+        "source": "图书馆"
+    },
     # 添加更多FAQ...
 ]
 

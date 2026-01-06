@@ -12,7 +12,7 @@ from app.config import settings
 from pymilvus import MilvusClient
 
 
-def check_milvus_text(collection_name="rag_standard", limit=10, filter_expr="", 
+def check_milvus_text(collection_name="rag_faq", limit=10, filter_expr="", 
                       output_fields=None, show_full_text=False):
     """
     检查 Milvus 中存储的完整文本
@@ -28,10 +28,6 @@ def check_milvus_text(collection_name="rag_standard", limit=10, filter_expr="",
     print(f"🔍 检查 Milvus 中的完整文本（集合: {collection_name}）")
     print(f"{'='*80}")
     
-    # 默认输出字段
-    if output_fields is None:
-        output_fields = ["text", "source"]
-    
     try:
         client = MilvusClient(
             uri=f"http://{settings.MILVUS_HOST}:{settings.MILVUS_PORT}"
@@ -45,6 +41,16 @@ def check_milvus_text(collection_name="rag_standard", limit=10, filter_expr="",
             return
         
         print(f"✅ 集合 {collection_name} 存在")
+        
+        # 判断是否为 FAQ 集合（根据集合名称或配置）
+        is_faq_collection = collection_name == settings.COLLECTION_FAQ
+        
+        # 默认输出字段：FAQ 集合使用 question/answer，其他使用 text
+        if output_fields is None:
+            if is_faq_collection:
+                output_fields = ["question", "answer", "source"]
+            else:
+                output_fields = ["text", "source"]
         
         # 获取集合统计信息
         try:
@@ -78,51 +84,107 @@ def check_milvus_text(collection_name="rag_standard", limit=10, filter_expr="",
             for i, result in enumerate(results, 1):
                 print(f"【记录 {i}】")
                 
-                # 显示所有字段（除了 text）
-                for key, value in result.items():
-                    if key not in ['text', 'id']:
-                        print(f"  {key}: {value}")
-                
+                # 显示 ID
                 if 'id' in result:
                     print(f"  ID: {result['id']}")
                 
-                # 显示文本内容
-                text = result.get('text', '')
-                if text:
-                    print(f"  文本长度: {len(text)} 字符")
+                # 显示其他元数据字段（除了 text, question, answer, id）
+                for key, value in result.items():
+                    if key not in ['text', 'question', 'answer', 'id']:
+                        print(f"  {key}: {value}")
+                
+                # 判断是 FAQ 还是普通文本
+                if is_faq_collection:
+                    # FAQ 格式：显示问题和答案
+                    question = result.get('question', '')
+                    answer = result.get('answer', '')
                     
-                    if show_full_text:
-                        print(f"  完整文本内容:")
-                        print(f"  {'─'*76}")
-                        lines = text.split('\n')
-                        for line in lines:
-                            if line.strip():
-                                print(f"  {line[:76]}")
-                        print(f"  {'─'*76}")
+                    if question:
+                        print(f"  ❓ 问题长度: {len(question)} 字符")
+                        if show_full_text:
+                            print(f"  完整问题:")
+                            print(f"  {'─'*76}")
+                            lines = question.split('\n')
+                            for line in lines:
+                                if line.strip():
+                                    print(f"  {line[:76]}")
+                            print(f"  {'─'*76}")
+                        else:
+                            print(f"  问题内容（前400字符）:")
+                            print(f"  {'─'*76}")
+                            preview = question[:400]
+                            lines = preview.split('\n')
+                            for line in lines[:10]:
+                                if line.strip():
+                                    print(f"  {line[:76]}")
+                            if len(question) > 400:
+                                print(f"  ... (还有 {len(question) - 400} 字符)")
+                            print(f"  {'─'*76}")
                     else:
-                        print(f"  文本内容（前400字符）:")
-                        print(f"  {'─'*76}")
-                        preview = text[:400]
-                        lines = preview.split('\n')
-                        for line in lines[:15]:  # 最多显示15行
-                            if line.strip():
-                                print(f"  {line[:76]}")
-                        if len(lines) > 15 or len(text) > 400:
-                            remaining = len(lines) - 15 if len(lines) > 15 else 0
-                            if remaining > 0:
-                                print(f"  ... (还有 {remaining} 行)")
-                            if len(text) > 400:
-                                print(f"  ... (还有 {len(text) - 400} 字符)")
-                        
-                        # 检查是否包含中文
-                        has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text[:500])
-                        chinese_count = sum(1 for char in text[:500] if '\u4e00' <= char <= '\u9fff')
-                        print(f"  {'─'*76}")
-                        print(f"  {'✅ 包含中文' if has_chinese else '❌ 不包含中文（可能是乱码）'}")
-                        if has_chinese:
-                            print(f"  前500字符中中文数量: {chinese_count}")
+                        print("  ❓ 问题: (空)")
+                    
+                    if answer:
+                        print(f"  💡 答案长度: {len(answer)} 字符")
+                        if show_full_text:
+                            print(f"  完整答案:")
+                            print(f"  {'─'*76}")
+                            lines = answer.split('\n')
+                            for line in lines:
+                                if line.strip():
+                                    print(f"  {line[:76]}")
+                            print(f"  {'─'*76}")
+                        else:
+                            print(f"  答案内容（前400字符）:")
+                            print(f"  {'─'*76}")
+                            preview = answer[:400]
+                            lines = preview.split('\n')
+                            for line in lines[:10]:
+                                if line.strip():
+                                    print(f"  {line[:76]}")
+                            if len(answer) > 400:
+                                print(f"  ... (还有 {len(answer) - 400} 字符)")
+                            print(f"  {'─'*76}")
+                    else:
+                        print("  💡 答案: (空)")
                 else:
-                    print("  文本: (空)")
+                    # 普通文本格式
+                    text = result.get('text', '')
+                    if text:
+                        print(f"  文本长度: {len(text)} 字符")
+                        
+                        if show_full_text:
+                            print(f"  完整文本内容:")
+                            print(f"  {'─'*76}")
+                            lines = text.split('\n')
+                            for line in lines:
+                                if line.strip():
+                                    print(f"  {line[:76]}")
+                            print(f"  {'─'*76}")
+                        else:
+                            print(f"  文本内容（前400字符）:")
+                            print(f"  {'─'*76}")
+                            preview = text[:400]
+                            lines = preview.split('\n')
+                            for line in lines[:15]:  # 最多显示15行
+                                if line.strip():
+                                    print(f"  {line[:76]}")
+                            if len(lines) > 15 or len(text) > 400:
+                                remaining = len(lines) - 15 if len(lines) > 15 else 0
+                                if remaining > 0:
+                                    print(f"  ... (还有 {remaining} 行)")
+                                if len(text) > 400:
+                                    print(f"  ... (还有 {len(text) - 400} 字符)")
+                            
+                            # 检查是否包含中文
+                            has_chinese = any('\u4e00' <= char <= '\u9fff' for char in text[:500])
+                            chinese_count = sum(1 for char in text[:500] if '\u4e00' <= char <= '\u9fff')
+                            print(f"  {'─'*76}")
+                            print(f"  {'✅ 包含中文' if has_chinese else '❌ 不包含中文（可能是乱码）'}")
+                            if has_chinese:
+                                print(f"  前500字符中中文数量: {chinese_count}")
+                    else:
+                        print("  文本: (空)")
+                
                 print(f"  {'─'*76}\n")
         
         except Exception as e:
@@ -163,6 +225,12 @@ if __name__ == "__main__":
   
   # 指定输出字段
   python check_milvus_text.py --fields text source dept_id
+  
+  # FAQ 集合会自动使用 question 和 answer 字段
+  python check_milvus_text.py --collection rag_faq
+  
+  # 也可以手动指定 FAQ 字段
+  python check_milvus_text.py --collection rag_faq --fields question answer source
         """
     )
     parser.add_argument("--collection", type=str, default="rag_standard", 

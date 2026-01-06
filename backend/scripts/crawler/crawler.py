@@ -331,6 +331,13 @@ class WebCrawler:
             if 'tongji.edu.cn' in url and 'xxjj' in url:
                 blocks = self._extract_tongji_intro_page(soup, url)
             
+            # 针对同济大学官网常见布局的处理：
+            # body > div.content.container.clearfix > div.section-right.fr > p
+            if not blocks and 'tongji.edu.cn' in url:
+                tongji_common_blocks = self._extract_tongji_common_layout(soup, url)
+                if tongji_common_blocks:
+                    blocks = tongji_common_blocks
+            
             # 针对百度百科的特殊处理
             if not blocks and 'baike.baidu.com' in url:
                 # 尝试提取百度百科的主要内容区域
@@ -449,6 +456,106 @@ class WebCrawler:
                     "url": url
                 })
         
+        return blocks
+
+    def _extract_tongji_common_layout(self, soup: BeautifulSoup, url: str) -> List[Dict[str, str]]:
+        """
+        提取同济官网常见模板中的正文：
+        一般结构为：
+        body
+          └─ div.content.container.clearfix
+               └─ div.section-right.fr
+                    └─ p（正文）
+
+        你的描述「body-div class=content container clearfix-div clas=section-right fr-里面的p标签」
+        对应的就是这一结构。
+        """
+        blocks: List[Dict[str, str]] = []
+
+        # 页面标题
+        page_title = ""
+        title_tag = soup.find('h1') or soup.find('title')
+        if title_tag:
+            page_title = title_tag.get_text(strip=True)
+
+        # 找到外层 content 容器
+        def has_classes(tag, required: List[str]) -> bool:
+            classes = tag.get('class', [])
+            if not classes:
+                return False
+            class_set = set(classes)
+            return all(c in class_set for c in required)
+
+        content_div = None
+        for div in soup.find_all('div'):
+            if has_classes(div, ['content', 'container', 'clearfix']):
+                content_div = div
+                break
+
+        if not content_div:
+            return blocks
+
+        # 内层右侧正文区域 section-right fr
+        right_div = None
+        for div in content_div.find_all('div', recursive=False):
+            # 有的页面 class 顺序不同，这里只要求同时包含两个 class
+            classes = div.get('class', [])
+            if not classes:
+                continue
+            class_set = set(classes)
+            if 'section-right' in class_set and 'fr' in class_set:
+                right_div = div
+                break
+
+        if not right_div:
+            # 有些页面 right 区域可能不是直接子元素，放宽为在 content_div 下任意层级查找
+            for div in content_div.find_all('div'):
+                classes = div.get('class', [])
+                if not classes:
+                    continue
+                class_set = set(classes)
+                if 'section-right' in class_set and 'fr' in class_set:
+                    right_div = div
+                    break
+
+        if not right_div:
+            return blocks
+
+        # 收集正文 p 标签文本
+        text_parts: List[str] = []
+        paragraphs = right_div.find_all('p')
+
+        for p in paragraphs:
+            text = p.get_text(separator=' ', strip=True)
+            text = re.sub(r'\s+', ' ', text).strip()
+            if not text:
+                continue
+
+            # 过滤明显的导航类短文本
+            if len(text) < 10:
+                continue
+            if any(keyword in text for keyword in ['首页', '导航', '返回顶部']):
+                continue
+
+            # 使用统一的清理和有效性判断
+            cleaned = self._clean_extracted_text(text)
+            if cleaned and self._is_valid_text(cleaned):
+                text_parts.append(cleaned)
+
+        if not text_parts:
+            return blocks
+
+        full_text = '\n\n'.join(text_parts)
+        full_text = self._clean_extracted_text(full_text)
+
+        if full_text and len(full_text) >= 50 and self._is_valid_text(full_text):
+            blocks.append({
+                "text": full_text,
+                "title": page_title or "页面内容",
+                "section": self._classify_section(page_title, full_text),
+                "url": url,
+            })
+
         return blocks
     
     def _clean_extracted_text(self, text: str) -> str:
