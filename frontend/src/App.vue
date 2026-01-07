@@ -32,7 +32,312 @@ const rememberPassword = ref(false);
 const currentMode = ref('visitor'); // visitor | scholar | student | denied
 const currentUserInfo = ref(null); // 存储当前登录用户信息
 
-// 根据用户角色决定显示模式
+// Type管理系统
+const currentType = ref('public'); // 当前选择的type: public | academic | internal | personal
+const typeConfig = {
+  public: {
+    label: '公开',
+    description: '校务公开/FAQ',
+    icon: Globe,
+    color: 'green',
+    badge: 'Standard 库已连接',
+    title: '访客通道 (Public Access)'
+  },
+  academic: {
+    label: '学术',
+    description: '文献/知识库',
+    icon: BookOpen,
+    color: 'purple',
+    badge: 'Knowledge 库已连接',
+    title: '学术科研模式 (Academic Mode)'
+  },
+  internal: {
+    label: '内部',
+    description: '通知/办事',
+    icon: FileText,
+    color: 'blue',
+    badge: 'Internal 库已连接',
+    title: '校内服务通道 (Campus Services)'
+  },
+  personal: {
+    label: '个人',
+    description: '画像/推荐',
+    icon: User,
+    color: 'orange',
+    badge: 'Personal 库已连接',
+    title: '个人服务 (Personal Services)'
+  }
+};
+
+// 根据用户角色获取可用的type列表
+const getAvailableTypes = (role) => {
+  const roleLower = (role || '').toLowerCase();
+  const types = ['public']; // 所有人都可以访问public
+  
+  if (roleLower.includes('scholar') || roleLower.includes('visiting') || 
+      roleLower.includes('student') || roleLower.includes('teacher')) {
+    types.push('academic');
+  }
+  
+  if (roleLower.includes('student') || roleLower.includes('teacher')) {
+    types.push('internal', 'personal');
+  }
+  
+  return types;
+};
+
+// 统一的会话和消息存储（按type管理）
+const typeSessions = ref({
+  public: { conversations: [], currentId: '', messages: [] },
+  academic: { conversations: [], currentId: '', messages: [] },
+  internal: { conversations: [], currentId: '', messages: [] },
+  personal: { conversations: [], currentId: '', messages: [] }
+});
+
+// 当前可用type列表
+const availableTypes = computed(() => {
+  if (!currentUserInfo.value) {
+    return ['public']; // 未登录只能访问public
+  }
+  const role = currentUserInfo.value.role || '';
+  return getAvailableTypes(role);
+});
+
+// 当前type的会话和消息（计算属性）
+const currentConversations = computed(() => {
+  const type = currentType.value;
+  if (!typeSessions.value[type]) {
+    typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+  }
+  return typeSessions.value[type]?.conversations || [];
+});
+
+const currentMessages = computed(() => {
+  const type = currentType.value;
+  if (!typeSessions.value[type]) {
+    typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+  }
+  return typeSessions.value[type]?.messages || [];
+});
+
+const currentConversationId = computed({
+  get: () => {
+    const type = currentType.value;
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+    return typeSessions.value[type]?.currentId || '';
+  },
+  set: (val) => {
+    const type = currentType.value;
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+    if (typeSessions.value[type]) {
+      typeSessions.value[type].currentId = val;
+    }
+  }
+});
+
+// 当前type的配置
+const currentTypeConfig = computed(() => {
+  return typeConfig[currentType.value] || typeConfig.public;
+});
+
+// 辅助函数：获取示例问题
+const getExampleQuestions = (type) => {
+  const questions = {
+    public: ['嘉定校区图书馆在哪里？', '四平路校区地图', '校车时刻表(仅公开版)', '2025本科招生简章'],
+    academic: ['汽车学院在自动驾驶领域最近有什么发表？', '查找IEEE关于机器学习的论文', 'CNKI中关于人工智能的最新研究', '同济大学2024年科研年报'],
+    internal: ['嘉定校区图书馆几点关门？', '查看我今天有什么课程', '我的高数成绩是多少？', '校园卡余额查询'],
+    personal: ['我的选课信息', '个人成绩单', '我的课程表', '个人推荐内容']
+  };
+  return questions[type] || questions.public;
+};
+
+// 辅助函数：获取热门问题
+const getPopularQuestions = (type) => {
+  const questions = {
+    public: ['同济大学的校训是什么？', '同济大学创建于哪一年？', '同济大学是"985""211"高校吗？', '同济大学的土木工程在全国处于什么水平？'],
+    academic: [],
+    internal: [],
+    personal: []
+  };
+  return questions[type] || [];
+};
+
+// 辅助函数：获取欢迎标题
+const getWelcomeTitle = (type) => {
+  if (type === 'personal' || type === 'internal') {
+    return `欢迎回来，${currentUser.value.name}！`;
+  }
+  return `欢迎使用 SynapseQ ${typeConfig[type]?.label || ''}`;
+};
+
+// 辅助函数：获取连接的集合
+const getConnectedCollections = (type) => {
+  const collections = {
+    public: [{ name: 'Standard (公开)', color: 'green', access: 'Read' }],
+    academic: [
+      { name: 'Standard (公开)', color: 'green', access: 'Read' },
+      { name: 'Knowledge (学术)', color: 'purple', access: 'Read' }
+    ],
+    internal: [
+      { name: 'Standard (公开)', color: 'green', access: 'Read' },
+      { name: 'Internal (内部)', color: 'blue', access: 'Read' },
+      { name: 'Person_info (个人)', color: 'orange', access: 'Private' }
+    ],
+    personal: [
+      { name: 'Standard (公开)', color: 'green', access: 'Read' },
+      { name: 'Person_info (个人)', color: 'orange', access: 'Private' }
+    ]
+  };
+  return collections[type] || collections.public;
+};
+
+// 获取type按钮的class
+const getTypeButtonClass = (type) => {
+  const baseClass = 'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 flex-shrink-0';
+  if (currentType.value === type) {
+    const color = typeConfig[type].color;
+    const colorClasses = {
+      green: 'bg-green-100 text-green-700 border-2 border-green-300 shadow-sm',
+      purple: 'bg-purple-100 text-purple-700 border-2 border-purple-300 shadow-sm',
+      blue: 'bg-blue-100 text-blue-700 border-2 border-blue-300 shadow-sm',
+      orange: 'bg-orange-100 text-orange-700 border-2 border-orange-300 shadow-sm'
+    };
+    return `${baseClass} ${colorClasses[color] || colorClasses.blue}`;
+  }
+  return `${baseClass} bg-gray-50 text-gray-600 hover:bg-gray-100 border-2 border-transparent`;
+};
+
+// 获取右侧面板渐变背景class
+const getRightPanelGradientClass = () => {
+  const color = currentTypeConfig.value.color;
+  const gradients = {
+    green: 'bg-gradient-to-br from-green-500 to-emerald-600',
+    purple: 'bg-gradient-to-br from-purple-500 to-pink-600',
+    blue: 'bg-gradient-to-br from-blue-500 to-indigo-600',
+    orange: 'bg-gradient-to-br from-orange-500 to-amber-600'
+  };
+  return `${gradients[color] || gradients.blue} rounded-xl p-4 text-white shadow-lg relative overflow-hidden`;
+};
+
+// 获取集合项的class
+const getCollectionItemClass = (color) => {
+  const classes = {
+    green: 'flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100',
+    purple: 'flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-100',
+    blue: 'flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100',
+    orange: 'flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100'
+  };
+  return classes[color] || classes.green;
+};
+
+// 获取集合点的class
+const getCollectionDotClass = (color) => {
+  const classes = {
+    green: 'w-2 h-2 rounded-full bg-green-500',
+    purple: 'w-2 h-2 rounded-full bg-purple-500',
+    blue: 'w-2 h-2 rounded-full bg-blue-500',
+    orange: 'w-2 h-2 rounded-full bg-orange-500'
+  };
+  return classes[color] || classes.green;
+};
+
+// 获取热门问题按钮的class
+const getPopularQuestionButtonClass = () => {
+  const color = currentTypeConfig.value.color;
+  const classes = {
+    green: 'w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 hover:border-green-200 hover:text-green-700 cursor-pointer transition-colors flex items-center justify-between group text-left',
+    purple: 'w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 hover:border-purple-200 hover:text-purple-700 cursor-pointer transition-colors flex items-center justify-between group text-left',
+    blue: 'w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 hover:border-blue-200 hover:text-blue-700 cursor-pointer transition-colors flex items-center justify-between group text-left',
+    orange: 'w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 hover:border-orange-200 hover:text-orange-700 cursor-pointer transition-colors flex items-center justify-between group text-left'
+  };
+  return classes[color] || classes.blue;
+};
+
+// 根据用户角色获取信息面板的渐变背景class
+const getUserPanelGradientClass = () => {
+  if (!currentUserInfo.value) {
+    return 'bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg relative overflow-hidden';
+  }
+  
+  const role = (currentUserInfo.value.role || '').toLowerCase();
+  
+  if (role.includes('scholar') || role.includes('visiting')) {
+    return 'bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4 text-white shadow-lg relative overflow-hidden';
+  } else if (role.includes('student') || role.includes('teacher')) {
+    return 'bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4 text-white shadow-lg relative overflow-hidden';
+  } else {
+    return 'bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg relative overflow-hidden';
+  }
+};
+
+// 根据用户角色获取连接的集合（而不是根据type）
+const getUserConnectedCollections = () => {
+  if (!currentUserInfo.value) {
+    return [{ name: 'Standard (公开)', color: 'green', access: 'Read' }];
+  }
+  
+  const role = (currentUserInfo.value.role || '').toLowerCase();
+  const collections = [{ name: 'Standard (公开)', color: 'green', access: 'Read' }];
+  
+  if (role.includes('scholar') || role.includes('visiting') || 
+      role.includes('student') || role.includes('teacher')) {
+    collections.push({ name: 'Knowledge (学术)', color: 'purple', access: 'Read' });
+  }
+  
+  if (role.includes('student') || role.includes('teacher')) {
+    collections.push({ name: 'Internal (内部)', color: 'blue', access: 'Read' });
+    collections.push({ name: 'Person_info (个人)', color: 'orange', access: 'Private' });
+  }
+  
+  return collections;
+};
+
+// 根据用户角色获取常用服务链接
+const getUserCommonServices = () => {
+  if (!currentUserInfo.value) {
+    return [];
+  }
+  
+  const role = (currentUserInfo.value.role || '').toLowerCase();
+  
+  if (role.includes('scholar') || role.includes('visiting')) {
+    return [
+      { name: '学术知识库', url: 'https://ir.tongji.edu.cn/tongji/' },
+      { name: '同济大学图书馆', url: 'https://www.lib.tongji.edu.cn/' }
+    ];
+  } else if (role.includes('student') || role.includes('teacher')) {
+    return [
+      { name: '教学信息管理系统', url: 'https://1.tongji.edu.cn/' },
+      { name: 'canvas', url: 'https://canvas.tongji.edu.cn/' },
+      { name: '同济邮箱', url: 'https://mail.tongji.edu.cn/' }
+    ];
+  }
+  
+  return [];
+};
+
+// 根据用户角色获取服务链接的样式class
+const getServiceLinkClass = () => {
+  if (!currentUserInfo.value) {
+    return 'w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 cursor-pointer transition-colors flex items-center justify-between group text-left hover:bg-gray-50';
+  }
+  
+  const role = (currentUserInfo.value.role || '').toLowerCase();
+  
+  if (role.includes('scholar') || role.includes('visiting')) {
+    return 'w-full p-3 bg-white border border-purple-200 text-purple-700 rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-between group text-left hover:bg-purple-50 hover:border-purple-300';
+  } else if (role.includes('student') || role.includes('teacher')) {
+    return 'w-full p-3 bg-white border border-blue-200 text-blue-700 rounded-lg text-xs cursor-pointer transition-colors flex items-center justify-between group text-left hover:bg-blue-50 hover:border-blue-300';
+  }
+  
+  return 'w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 cursor-pointer transition-colors flex items-center justify-between group text-left hover:bg-gray-50';
+};
+
+// 根据用户角色决定显示模式（保留向后兼容）
 const getModeByRole = (role) => {
   const roleLower = (role || '').toLowerCase();
   // 根据角色映射到对应模式
@@ -47,6 +352,228 @@ const getModeByRole = (role) => {
 
 const formatTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const formatDate = (date = new Date()) => date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+
+// ========== 统一的Type会话管理 ==========
+
+// 加载指定type的会话列表
+const loadTypeSessions = async (type) => {
+  try {
+    // 确保type存在
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+    
+    const response = await sessionAPI.getSessionList(type);
+    typeSessions.value[type].conversations = (response.data || []).map(session => ({
+      id: session.session_id,
+      title: session.title || '新对话',
+      time: formatDate(new Date(session.created_at)),
+      updatedAt: formatTime(),
+      type: session.type || type
+    }));
+  } catch (error) {
+    console.error(`加载${type}会话列表失败:`, error);
+    // 确保即使出错也有空数组
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+  }
+};
+
+// 加载指定type的会话历史
+const loadTypeHistory = async (type, sessionId) => {
+  try {
+    // 确保type存在
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+    
+    const response = await sessionAPI.getSessionHistory(sessionId);
+    typeSessions.value[type].messages = (response.messages || []).map((msg, idx) => ({
+      id: idx + 1,
+      sender: msg.role === 'user' ? 'user' : 'bot',
+      timestamp: formatTime(new Date(msg.timestamp * 1000)),
+      content: msg.content
+    }));
+  } catch (error) {
+    console.error(`加载${type}历史失败:`, error);
+    // 确保即使出错也有空数组
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+    if (typeSessions.value[type]) {
+      typeSessions.value[type].messages = [];
+    }
+  }
+};
+
+// 创建新会话（指定type）
+const handleTypeNewConversation = async (type) => {
+  try {
+    // 确保type存在
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+    
+    const response = await sessionAPI.createSession(type);
+    const newSession = {
+      id: response.session_id,
+      title: response.title || '新对话',
+      time: formatDate(new Date(response.created_at)),
+      updatedAt: formatTime(),
+      type: response.type || type
+    };
+    typeSessions.value[type].conversations.unshift(newSession);
+    typeSessions.value[type].currentId = response.session_id;
+    typeSessions.value[type].messages = [];
+  } catch (error) {
+    console.error(`创建${type}会话失败:`, error);
+    alert(`创建会话失败: ${error.message}`);
+    // 确保即使出错也有空状态
+    if (!typeSessions.value[type]) {
+      typeSessions.value[type] = { conversations: [], currentId: '', messages: [] };
+    }
+  }
+};
+
+// 切换会话（指定type）
+const handleTypeSwitchConversation = async (type, id) => {
+  typeSessions.value[type].currentId = id;
+  await loadTypeHistory(type, id);
+};
+
+// 删除会话（指定type）
+const handleTypeDeleteConversation = async (type, id) => {
+  try {
+    await sessionAPI.deleteSession(id);
+    const index = typeSessions.value[type].conversations.findIndex(c => c.id === id);
+    if (index !== -1) {
+      typeSessions.value[type].conversations.splice(index, 1);
+      if (typeSessions.value[type].currentId === id) {
+        if (typeSessions.value[type].conversations.length > 0) {
+          typeSessions.value[type].currentId = typeSessions.value[type].conversations[0].id;
+          await loadTypeHistory(type, typeSessions.value[type].conversations[0].id);
+        } else {
+          typeSessions.value[type].messages = [];
+          typeSessions.value[type].currentId = '';
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`删除${type}会话失败:`, error);
+    alert(`删除会话失败: ${error.message}`);
+  }
+};
+
+// 发送消息（指定type）
+const handleTypeSend = async (type, text) => {
+  if (!typeSessions.value[type].currentId) {
+    await handleTypeNewConversation(type);
+  }
+  
+  // 添加用户消息
+  const userMessage = {
+    id: typeSessions.value[type].messages.length + 1,
+    sender: 'user',
+    timestamp: formatTime(),
+    content: text
+  };
+  typeSessions.value[type].messages.push(userMessage);
+  
+  // 更新对话标题
+  const conversation = typeSessions.value[type].conversations.find(
+    c => c.id === typeSessions.value[type].currentId
+  );
+  if (conversation && conversation.title === '新对话') {
+    conversation.title = text.length > 20 ? text.substring(0, 20) + '...' : text;
+    conversation.updatedAt = formatTime();
+  }
+  
+  // 创建AI回复消息占位符
+  const botMessageId = typeSessions.value[type].messages.length + 1;
+  const botMessage = {
+    id: botMessageId,
+    sender: 'bot',
+    timestamp: formatTime(),
+    content: ''
+  };
+  typeSessions.value[type].messages.push(botMessage);
+  
+  // 发送消息到后端
+  try {
+    await chatAPI.sendMessage(
+      type,
+      text,
+      typeSessions.value[type].currentId,
+      (chunk) => {
+        // 流式更新消息内容
+        const msg = typeSessions.value[type].messages.find(m => m.id === botMessageId);
+        if (msg) {
+          msg.content += chunk;
+        }
+      },
+      (error) => {
+        console.error('发送消息失败:', error);
+        const msg = typeSessions.value[type].messages.find(m => m.id === botMessageId);
+        if (msg) {
+          msg.content = '抱歉，发生了错误: ' + error.message;
+        }
+      },
+      () => {
+        // 完成
+      }
+    );
+  } catch (error) {
+    console.error('发送消息失败:', error);
+    const msg = typeSessions.value[type].messages.find(m => m.id === botMessageId);
+    if (msg) {
+      msg.content = '抱歉，发生了错误: ' + error.message;
+    }
+  }
+};
+
+// 切换type
+const handleTypeChange = async (newType) => {
+  if (newType === currentType.value) return;
+  
+  try {
+    // 确保type存在
+    if (!typeSessions.value[newType]) {
+      typeSessions.value[newType] = { conversations: [], currentId: '', messages: [] };
+    }
+    
+    // 先切换type，让UI立即更新
+    currentType.value = newType;
+    
+    // 如果该type还没有加载会话，则加载
+    if (typeSessions.value[newType].conversations.length === 0) {
+      await loadTypeSessions(newType);
+    }
+    
+    // 如果有会话但当前没有选中，则选中第一个
+    if (typeSessions.value[newType].conversations.length > 0) {
+      if (!typeSessions.value[newType].currentId) {
+        typeSessions.value[newType].currentId = typeSessions.value[newType].conversations[0].id;
+      }
+      // 加载当前会话的历史
+      if (typeSessions.value[newType].currentId) {
+        await loadTypeHistory(newType, typeSessions.value[newType].currentId);
+      }
+    } else {
+      // 如果没有会话，创建新会话
+      await handleTypeNewConversation(newType);
+    }
+  } catch (error) {
+    console.error(`切换type到${newType}失败:`, error);
+    // 如果出错，确保至少有一个空的状态
+    if (!typeSessions.value[newType]) {
+      typeSessions.value[newType] = { conversations: [], currentId: '', messages: [] };
+    }
+    if (!typeSessions.value[newType].messages) {
+      typeSessions.value[newType].messages = [];
+    }
+  }
+};
 
 // Conversation management
 // Visitor
@@ -716,23 +1243,25 @@ const handleLogin = async () => {
     loggingIn.value = false;
     showLogin.value = false;
     
-    // 加载会话列表
-    if (currentMode.value === 'scholar') {
-      await loadScholarSessions();
-      if (scholarConversations.value.length === 0) {
-        await handleScholarNewConversation();
-      } else {
-        currentScholarConversationId.value = scholarConversations.value[0].id;
-        await loadScholarHistory(scholarConversations.value[0].id);
-      }
+    // 根据角色设置默认type
+    const available = getAvailableTypes(role);
+    currentType.value = available[0] || 'public';
+    
+    // 加载所有可用type的会话列表
+    for (const type of available) {
+      await loadTypeSessions(type);
+    }
+    
+    // 为当前type初始化会话
+    if (typeSessions.value[currentType.value].conversations.length === 0) {
+      await handleTypeNewConversation(currentType.value);
     } else {
-      await loadStudentSessions();
-      if (studentConversations.value.length === 0) {
-        await handleStudentNewConversation();
-      } else {
-        currentStudentConversationId.value = studentConversations.value[0].id;
-        await loadStudentHistory(studentConversations.value[0].id);
-      }
+      typeSessions.value[currentType.value].currentId = 
+        typeSessions.value[currentType.value].conversations[0].id;
+      await loadTypeHistory(
+        currentType.value,
+        typeSessions.value[currentType.value].conversations[0].id
+      );
     }
   } catch (error) {
     loggingIn.value = false;
@@ -748,12 +1277,13 @@ const handleGuestLogin = async () => {
     currentUserInfo.value = response.user_info || {};
     showLogin.value = false;
     currentMode.value = 'visitor';
-    await loadVisitorSessions();
-    if (visitorConversations.value.length === 0) {
-      await handleVisitorNewConversation();
+    currentType.value = 'public';
+    await loadTypeSessions('public');
+    if (typeSessions.value.public.conversations.length === 0) {
+      await handleTypeNewConversation('public');
     } else {
-      currentVisitorConversationId.value = visitorConversations.value[0].id;
-      await loadVisitorHistory(visitorConversations.value[0].id);
+      typeSessions.value.public.currentId = typeSessions.value.public.conversations[0].id;
+      await loadTypeHistory('public', typeSessions.value.public.conversations[0].id);
     }
   } catch (error) {
     console.error('访客登录失败:', error);
@@ -771,14 +1301,22 @@ const handleLogout = async () => {
   // 重置所有状态
   showLogin.value = true;
   currentMode.value = 'visitor';
+  currentType.value = 'public';
   
-  // 清空所有对话历史
+  // 清空所有type的会话数据
+  typeSessions.value = {
+    public: { conversations: [], currentId: '', messages: [] },
+    academic: { conversations: [], currentId: '', messages: [] },
+    internal: { conversations: [], currentId: '', messages: [] },
+    personal: { conversations: [], currentId: '', messages: [] }
+  };
+  
+  // 保留向后兼容（清空旧的独立状态）
   visitorConversations.value = [];
   scholarConversations.value = [];
   studentConversations.value = [];
   deniedConversations.value = [];
   
-  // 清空当前对话ID和消息
   currentVisitorConversationId.value = '';
   currentScholarConversationId.value = '';
   currentStudentConversationId.value = '';
@@ -840,26 +1378,23 @@ onMounted(async () => {
       currentMode.value = getModeByRole(role);
       showLogin.value = false;
       
-      // 加载会话列表
-      if (currentMode.value === 'scholar') {
-        await loadScholarSessions();
-        if (scholarConversations.value.length > 0) {
-          currentScholarConversationId.value = scholarConversations.value[0].id;
-          await loadScholarHistory(scholarConversations.value[0].id);
-        }
-      } else if (currentMode.value === 'student') {
-        await loadStudentSessions();
-        if (studentConversations.value.length > 0) {
-          currentStudentConversationId.value = studentConversations.value[0].id;
-          await loadStudentHistory(studentConversations.value[0].id);
-        }
-      } else {
-        // visitor 模式
-        await loadVisitorSessions();
-        if (visitorConversations.value.length > 0) {
-          currentVisitorConversationId.value = visitorConversations.value[0].id;
-          await loadVisitorHistory(visitorConversations.value[0].id);
-        }
+      // 根据角色设置默认type
+      const available = getAvailableTypes(role);
+      currentType.value = available[0] || 'public';
+      
+      // 加载所有可用type的会话列表
+      for (const type of available) {
+        await loadTypeSessions(type);
+      }
+      
+      // 为当前type初始化会话
+      if (typeSessions.value[currentType.value].conversations.length > 0) {
+        typeSessions.value[currentType.value].currentId = 
+          typeSessions.value[currentType.value].conversations[0].id;
+        await loadTypeHistory(
+          currentType.value,
+          typeSessions.value[currentType.value].conversations[0].id
+        );
       }
     } else {
       showLogin.value = true;
@@ -1006,11 +1541,118 @@ onMounted(async () => {
     </div>
   </div>
   <div v-else class="h-screen flex flex-col bg-white">
+    <!-- Type切换器 -->
+    <div class="border-b bg-white px-4 py-2 flex items-center gap-2 overflow-x-auto">
+      <div class="text-xs font-semibold text-gray-500 mr-2 flex-shrink-0">模块:</div>
+      <div class="flex gap-2">
+        <button
+          v-for="type in availableTypes"
+          :key="type"
+          @click="handleTypeChange(type)"
+          :class="getTypeButtonClass(type)"
+        >
+          <component :is="typeConfig[type].icon" size="16" />
+          <span>{{ typeConfig[type].label }}</span>
+        </button>
+      </div>
+    </div>
+    
     <div class="flex-1 overflow-hidden relative">
       <div class="w-full h-full bg-white overflow-hidden">
+        <!-- 统一的Type管理界面 -->
+        <SynapseQShell
+          :key="currentType"
+          :themeColor="currentTypeConfig.color"
+          :headerTitle="currentTypeConfig.title"
+          :headerBadge="currentTypeConfig.badge"
+          :currentUser="currentUser"
+          :conversationHistory="currentConversations"
+          :currentConversationId="currentConversationId"
+          :messages="currentMessages"
+          :exampleQuestions="getExampleQuestions(currentType)"
+          :welcomeTitle="getWelcomeTitle(currentType)"
+          @send-message="(text) => handleTypeSend(currentType, text)"
+          @new-conversation="() => handleTypeNewConversation(currentType)"
+          @switch-conversation="(id) => handleTypeSwitchConversation(currentType, id)"
+          @delete-conversation="(id) => handleTypeDeleteConversation(currentType, id)"
+          @logout="handleLogout"
+        >
+          <template #right-panel>
+            <div :class="getUserPanelGradientClass()">
+              <div class="absolute top-0 right-0 p-3 opacity-20">
+                <Shield size="64" />
+              </div>
+              <div class="relative z-10">
+                <div class="text-xs opacity-80 uppercase tracking-widest mb-1">{{ userCardTitle }}</div>
+                <div class="text-2xl font-bold tracking-tight mb-4">{{ currentUser.id }}</div>
+                <div class="flex items-end justify-between">
+                  <div>
+                    <div class="text-sm font-medium">{{ currentUser.name }}</div>
+                    <div class="text-xs opacity-80">{{ currentUser.department }}</div>
+                  </div>
+                  <div class="w-10 h-10 rounded bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-lg">
+                    {{ currentUser.avatar }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">已连接的向量集合</h4>
+              <div class="space-y-2">
+                <div v-for="collection in getUserConnectedCollections()" :key="collection.name"
+                  :class="getCollectionItemClass(collection.color)">
+                  <div class="flex items-center gap-2">
+                    <div :class="getCollectionDotClass(collection.color)"></div>
+                    <span class="text-sm font-medium text-gray-700">{{ collection.name }}</span>
+                  </div>
+                  <span class="text-xs bg-white px-2 py-0.5 rounded text-gray-500 border border-gray-100">{{ collection.access }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4" v-if="getUserCommonServices().length > 0">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <FileText v-if="currentMode === 'student'" size="14" />
+                <Search v-else size="14" />
+                {{ currentMode === 'student' ? '常用服务' : '快速访问' }}
+              </h4>
+              <div class="space-y-2">
+                <a
+                  v-for="service in getUserCommonServices()"
+                  :key="service.name"
+                  :href="service.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :class="getServiceLinkClass()"
+                >
+                  <span>{{ service.name }}</span>
+                  <ChevronRight size="12" class="opacity-100 transition-opacity" />
+                </a>
+              </div>
+            </div>
+
+            <div class="mt-4" v-if="currentMode === 'visitor' && getPopularQuestions('public').length > 0">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">热门问题</h4>
+              <div class="space-y-2">
+                <button
+                  v-for="q in getPopularQuestions('public')"
+                  :key="q"
+                  @click="handleTypeSend('public', q)"
+                  class="w-full p-3 bg-white border border-gray-100 rounded-lg text-xs text-gray-600 hover:border-green-200 hover:text-green-700 cursor-pointer transition-colors flex items-center justify-between group text-left"
+                >
+                  <span>{{ q }}</span>
+                  <ChevronRight size="12" class="opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              </div>
+            </div>
+          </template>
+        </SynapseQShell>
+        
+        <!-- 保留向后兼容的旧模式组件 -->
         <!-- Visitor -->
         <SynapseQShell
-          v-if="currentMode === 'visitor'"
+          v-if="false && currentMode === 'visitor'"
           themeColor="green"
           headerTitle="访客通道 (Public Access)"
           headerBadge="Standard 库已连接"
@@ -1078,7 +1720,7 @@ onMounted(async () => {
 
         <!-- Scholar -->
         <SynapseQShell
-          v-else-if="currentMode === 'scholar'"
+          v-if="false && currentMode === 'scholar'"
           themeColor="purple"
           headerTitle="学术科研模式 (Academic Mode)"
           headerBadge="Knowledge 库已连接"
@@ -1160,7 +1802,7 @@ onMounted(async () => {
 
         <!-- Student -->
         <SynapseQShell
-          v-else-if="currentMode === 'student'"
+          v-if="false && currentMode === 'student'"
           themeColor="blue"
           headerTitle="校内服务通道 (Campus Services)"
           headerBadge="Internal 库已连接"
@@ -1250,7 +1892,7 @@ onMounted(async () => {
 
         <!-- Access Denied -->
         <SynapseQShell
-          v-else-if="currentMode === 'denied'"
+          v-if="false && currentMode === 'denied'"
           themeColor="green"
           headerTitle="访客通道 (Public Access)"
           headerBadge="Standard 库已连接"
