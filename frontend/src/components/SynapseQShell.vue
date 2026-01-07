@@ -135,7 +135,6 @@ const showWelcome = computed(() => {
               <MessageSquare class="w-4 h-4 flex-shrink-0" />
               <div class="flex-1 min-w-0">
                 <div class="text-sm font-medium truncate">{{ conversation.title || '新对话' }}</div>
-                <div class="text-xs opacity-70 truncate">{{ conversation.time || conversation.updatedAt }}</div>
               </div>
             </button>
             <button
@@ -270,7 +269,6 @@ const showWelcome = computed(() => {
                     <span class="underline decoration-dotted">{{ src.title }}</span>
                   </div>
                 </div>
-                <div class="text-xs text-gray-400 px-1">{{ msg.timestamp }}</div>
               </div>
             </div>
           </div>
