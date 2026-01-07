@@ -39,4 +39,6 @@ class Settings(BaseSettings):
     COLLECTION_INTERNAL: str = "rag_internal"
     COLLECTION_PERSONAL: str = "rag_person_info"
 
+    GLOBAL_SEED: int = 1234
+
 settings = Settings()

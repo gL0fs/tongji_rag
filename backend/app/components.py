@@ -290,17 +290,20 @@ class LLMGenerator:
     负责查询重写（Query Rewriting）和最终答案生成（RAG Generation）。
     """
     def __init__(self):
-        # 初始化重写模型 (使用低温度以保证稳定性)
+        # 初始化重写模型 
         self.rewrite_llm = ChatTongyi(
             model=settings.REWRITE_MODEL_NAME, 
             api_key=settings.DASHSCOPE_API_KEY,
-            temperature=0.1
+            temperature=0.2,# 重写时允许一定创造性
+            seed=settings.GLOBAL_SEED # 固定种子
         )
         # 初始化生成模型 (开启流式输出)
         self.gen_llm = ChatTongyi(
             model=settings.GENERATE_MODEL_NAME, 
             api_key=settings.DASHSCOPE_API_KEY,
-            streaming=True
+            streaming=True,
+            temperature=0,#回答稳定性优先
+            seed=settings.GLOBAL_SEED
         )
 
     def rewrite_query(self, history: List[Any], current: str) -> RewrittenQuery:
@@ -312,7 +315,15 @@ class LLMGenerator:
             return RewrittenQuery(original_text=current, rewritten_text=current)
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "你是一个搜索查询优化专家。请根据以下对话历史，将用户的最新问题改写为一个独立、完整、包含所有必要上下文的搜索查询语句。如果不需要改写，直接输出原句。不要输出任何解释。"),
+            ("system", """你是一个专门负责“指代消解”和“省略补全”的工具。
+            请结合对话历史，仅针对用户的最新问题做以下两件事：
+            1. **指代替换**：将“它”、“这个”、“那里”等代词替换为历史对话中的具体实体。
+            2. **成分补全**：如果问题缺失主语或宾语，请根据上下文补齐。
+
+            **严格约束（Strict Constraints）**：
+            - 如果用户的最新问题已经是主谓宾完整、语义清晰的独立句子，**请直接输出原句，严禁修改任何字词**。
+            - 不要尝试优化问题的表达方式、语序或修辞。
+            - 不要输出任何解释或多余的标点。"""),
             MessagesPlaceholder(variable_name="history"),
             ("human", "{question}")
         ])
