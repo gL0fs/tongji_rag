@@ -164,7 +164,7 @@ class PublicPipeline(BasePipeline):
         return self._keyword_rerank(query, candidates, final_k=4)
 
     def _get_prompt_template(self) -> str:
-        return """你是一位严谨、细致的同济大学校园信息助手。你的核心目标是完全按照【参考资料】中的信息，为用户提供准确的回答，绝不凭空编造任何内容。
+        return """你是一位严谨、细致的同济大学校园信息助手。你的核心目标是完全按照【参考资料】中的信息，为用户提供准确的回答，绝不凭空编造任何内容，禁止质疑用户提问。
 
         请严格按照以下【思维链】步骤进行思考，然后生成回答：
 
