@@ -33,7 +33,7 @@ class HistoryManager:
 
     def create_session(self, user_id: str, session_type: str, title: str = "新对话") -> str:
         """
-        修改：创建会话时记录 session_type
+        创建会话时记录 session_type
         """
         session_id = str(uuid.uuid4())
         timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -73,7 +73,7 @@ class HistoryManager:
 
     def get_user_sessions(self, user_id: str, type_filter: str = None) -> List[SessionSchema]:
         """
-        修改：增加 type_filter 参数，只返回对应类型的会话
+        只返回对应类型的会话
         """
         user_key = f"user_sessions:{user_id}"
         if not self.redis.exists(user_key):
@@ -102,7 +102,7 @@ class HistoryManager:
 
     def check_session_type(self, user_id: str, session_id: str, required_type: str) -> bool:
         """
-        新增：校验会话类型是否匹配
+        校验会话类型是否匹配
         """
         user_key = f"user_sessions:{user_id}"
         meta_json = self.redis.hget(user_key, session_id)
@@ -217,59 +217,71 @@ class VectorRetriever:
         )
 
     def search(self, query_text: str, collections: List[str], top_k: int = 3, filters: str = "") -> List[Document]:
-        """
-        通用检索方法：支持检索普通库(text)和FAQ库(answer)
-        """
-        try:
-            query_vector = self.embedder.embed_query(query_text)
-        except Exception as e:
-            print(f"Embedding error: {e}")
-            return []
-
-        all_results = []
-
-        existing_cols = self.client.list_collections()
-
-        for col_name in collections:
+            """
+            通用检索方法：支持检索普通库(text)和FAQ库(answer)
+            """
             try:
-                if col_name not in existing_cols:
-                    continue
-            
-                res = self.client.search(
-                    collection_name=col_name,
-                    data=[query_vector],
-                    limit=top_k,
-                    filter=filters, 
-                    output_fields=["text", "source", "dept_id", "user_id", "answer", "question"]
-                )
-                for hit in res[0]:
-                    entity = hit['entity']
-                    
-                    # 区分：是 FAQ 还是 普通 Chunk
-                    is_faq = "answer" in entity and entity["answer"]
-                    
-                    # 构造内容：
-                    # FAQ -> content 用 question 占位, answer 放 metadata
-                    # RAG -> content 用 text
-                    content = entity.get("question") if is_faq else entity.get("text", "")
-                    
-                    doc = Document(
-                        id=str(hit['id']),
-                        content=content,
-                        score=hit['distance'], 
-                        source=entity.get('source', col_name),
-                        metadata={
-                            "is_faq": is_faq,
-                            "answer": entity.get("answer", ""), # 拿出答案
-                            **entity
-                        }
-                    )
-                    all_results.append(doc)
+                query_vector = self.embedder.embed_query(query_text)
             except Exception as e:
-                print(f"Search error in {col_name}: {e}")
+                print(f"Embedding error: {e}")
+                return []
 
-        all_results.sort(key=lambda x: x.score, reverse=True)
-        return all_results[:top_k]
+            all_results = []
+            
+            try:
+                existing_cols = self.client.list_collections()
+            except Exception as e:
+                print(f"List collections error: {e}")
+                return []
+
+            for col_name in collections:
+                try:
+                    if col_name not in existing_cols:
+                        continue
+                    
+                    # 【修正点】严格对照 fix_milvus.py 定义的 Schema
+                    if "faq" in col_name.lower():
+                        # FAQ 只有 question, answer, source
+                        target_fields = ["question", "answer", "source"]
+                    else:
+                        # RAG 库有 text, source, dept_id, user_id
+                        target_fields = ["text", "source", "dept_id", "user_id"]
+
+                    res = self.client.search(
+                        collection_name=col_name,
+                        data=[query_vector],
+                        limit=top_k,
+                        filter=filters, 
+                        output_fields=target_fields 
+                    )
+                    
+                    for hit in res[0]:
+                        entity = hit['entity']
+                        
+                        is_faq = "answer" in entity and entity["answer"]
+                        
+                        # 构造内容：
+                        content = entity.get("question") if is_faq else entity.get("text", "")
+                        
+                        doc = Document(
+                            id=str(hit['id']),
+                            content=content,
+                            score=hit['distance'], 
+                            source=entity.get('source', col_name),
+                            metadata={
+                                "is_faq": is_faq,
+                                "answer": entity.get("answer", ""), 
+                                "dept_id": entity.get("dept_id", ""),
+                                "user_id": entity.get("user_id", ""),
+                                **entity
+                            }
+                        )
+                        all_results.append(doc)
+                except Exception as e:
+                    print(f"Search error in {col_name}: {e}")
+
+            all_results.sort(key=lambda x: x.score, reverse=True)
+            return all_results[:top_k]
 
 # --- LLM 生成器 (LangChain) ---
 class LLMGenerator:
