@@ -2,9 +2,9 @@
 
 基于 RAG (检索增强生成) 架构的校园垂直领域大模型问答系统。支持多角色权限控制（游客/学生/教师/学者）、流式对话生成以及多源数据检索（公开/内部/学术/个人）。
 
-## 🛠 技术栈 (Tech Stack)
+## 技术栈 (Tech Stack)
 
-* **LLM & Embedding**: Alibaba DashScope (通义千问 Qwen-Plus / Text-Embedding-v2)
+* **LLM & Embedding**: Alibaba DashScope (通义千问 Qwen-Plus / Text-Embedding-v4)
 * **Vector Database**: Milvus 2.3 (Standalone)
 * **Backend Framework**: FastAPI (Python 3.10)
 * **Auth & User Data**: MySQL 8.0 + JWT (RBAC)
@@ -15,7 +15,7 @@
 
 ```text
 Tongji-RAG/
-├── backend/            # 后端核心代码 (FastAPI)
+├── backend/            # 后端核心代码 (FastAPI)(包括爬虫脚本)
 ├── frontend/           # 前端核心代码
 ├── data/               # 数据库持久化存储 (自动生成，不提交)
 ├── docker-compose.yml  # 容器编排配置
@@ -41,24 +41,13 @@ cp .env.example .env
 ```bash
 docker-compose up -d --build
 ```
-### 4. 初始化数据 (首次运行必须)
-容器启动后，数据库是空的。需要运行初始化脚本写入默认用户和 Mock 向量数据。
 
-```Bash
-# 进入后端容器
-docker exec -it rag-backend /bin/bash
-
-# 1. 初始化 MySQL (创建表结构 + 默认用户)
-python scripts/init_sql.py
-
-# 2. 初始化 Milvus (创建集合 + 写入测试向量)
-python scripts/init_milvus.py
-
-# 退出容器
-exit
-```
 ## 测试与使用
-服务默认运行在 http://localhost:8000。
+**远程访问时把localhost替换为真实服务器ip**
+
+前端服务运行在 http://localhost:80
+
+后端服务默认运行在 http://localhost:8000。
 
 API 文档 (Swagger UI):访问 http://localhost:8000/docs 进行可视化测试。
 
